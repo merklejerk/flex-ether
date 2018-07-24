@@ -293,3 +293,9 @@ change. Many of these can also be overridden in individual call options.
 - `async resolveAddress(addr)` Resolve an ENS address. If a regular address is passed, the checksummed version will be returned.
 - `async getBlockNumber()` Get the current block number.
 - `async getDefaultAccount()` Get the default account, set by the provider.
+
+### Module Properties
+The following module properties affect gas calculations for all instances:
+
+- `MAX_GAS` Maximum gas limit for transactions. Defaults to `6721975`.
+- `MAX_GAS_PRICE` Maximum gas price for transactions. Defaults to `256` gwei.

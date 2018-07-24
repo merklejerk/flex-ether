@@ -44,10 +44,14 @@ module.exports = class FlexEther {
 		return (await this._web3.eth.getBalance(addr, block)).toString(10);
 	}
 
-	async getGasPrice(bonus) {
+	async getGasPrice(bonus=0, max=0) {
 		bonus = (_.isNumber(bonus) ? bonus : this.gasPriceBonus) || 0;
-		return new BigNumber(await this._web3.eth.getGasPrice())
-			.times(1+bonus).toString(10);
+		max = max || module.exports.MAX_GAS_PRICE;
+		const price = new BigNumber(await this._web3.eth.getGasPrice())
+			.times(1+bonus);
+		if (price.gt(max))
+			price = new BigNumber(max);
+		return price.toString(10);
 	}
 
 	async estimateGas(to, opts={}) {
@@ -87,11 +91,14 @@ module.exports = class FlexEther {
 	}
 
 	async resolveAddress(addr) {
+		if (!addr)
+			throw new Error('Invalid address.');
 		return module.exports.ens.resolve(addr, {web3: this._web3});
 	}
 };
 
 module.exports.MAX_GAS = 6721975;
+module.exports.MAX_GAS_PRICE = new BigNumber('256e9').toString(10); // 200 gwei
 module.exports.ens = ens;
 
 
