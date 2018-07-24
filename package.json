@@ -36,6 +36,7 @@
 		"self-signed",
 		"async",
 		"await",
+		"promise",
 		"private key",
 		"wallet",
 		"es2017",
