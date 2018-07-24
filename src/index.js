@@ -256,7 +256,7 @@ function wrapSendTxPromise(promise) {
 	});
 	// Create a function that creates a promise that resolves after a number of
 	// confirmations.
-	wrapper.confirmed = (count=0) => {
+	wrapper.confirmed = (count=1) => {
 			// Zero confirmations is the same as waiting on the receipt.
 			if (count == 0)
 				return wrapper.receipt;
