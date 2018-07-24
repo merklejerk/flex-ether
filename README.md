@@ -287,7 +287,6 @@ change. Many of these can also be overridden in individual call options.
 - `gasBonus (Number)` Gas limit estimate bonus for transactions, where `0.01 = +1%`. May be negative.
 - `gasPriceBonus (Number)` Gas price bonus for transactions, where `0.01 = +1%`. May be negative.
 - `web3 (Web3)` Web3 instance used.
-- `abi` (Read-only) The ABI defining the contract.
 - `async getTransactionCount(addr)` Get the nonce for an account.
 - `async resolveBlockDirective(blockNum)` Resolve a block directive (e.g., `41204102` or `-2`) to a block number.
 - `async getChainId()` Get the chain ID of the connected network.
