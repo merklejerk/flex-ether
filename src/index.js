@@ -12,7 +12,7 @@ const assert = require('assert');
 module.exports = class FlexEther {
 	constructor(opts={}) {
 		this.web3 = getWeb3(opts);
-		this.gasBonus = _.isNumber(opts.gasBonus) ? opts.gasBonus : 0.33;
+		this.gasBonus = _.isNumber(opts.gasBonus) ? opts.gasBonus : 0.66;
 		this.gasPriceBonus = _.isNumber(opts.gasPriceBonus) ?
 			opts.gasPriceBonus : -0.005;
 	}
