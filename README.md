@@ -1,4 +1,4 @@
-![build status](https://travis-ci.org/cluracan/flex-ether.svg?branch=master)
+![build status](https://travis-ci.org/merklejerk/flex-ether.svg?branch=master)
 ![npm package](https://badge.fury.io/js/flex-ether.svg)
 
 # flex-ether
