@@ -203,17 +203,6 @@ async function sendTx(inst, to, opts) {
 	return {sent: sent};
 }
 
-async function estimateGasRaw(inst, txOpts, bonus) {
-	txOpts = _.assign({}, txOpts, {
-			gasPrice: 1,
-			gasLimit: module.exports.MAX_GAS,
-		});
-	bonus = (_.isNumber(bonus) ? bonus : inst.bonus) || 0;
-	const gas = await inst._web3.eth.estimateGas(
-		normalizeTxOpts(txOpts));
-	return Math.ceil(gas * (1+bonus));
-}
-
 async function getFirstAccount(web3) {
 	const accts = await web3.eth.getAccounts();
 	if (accts && accts.length)
