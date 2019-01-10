@@ -97,10 +97,8 @@ module.exports = class FlexEther {
 	}
 };
 
-module.exports.MAX_GAS = 8e6;
 module.exports.MAX_GAS_PRICE = new BigNumber('256e9').toString(10); // 256 gwei
 module.exports.ens = ens;
-
 
 function getWeb3(opts={}) {
 	if (opts.web3)
@@ -114,10 +112,15 @@ function getWeb3(opts={}) {
 	return new Web3(provider);
 }
 
+async function getBlockGasLimit(inst) {
+	const lastBlock = await inst._web3.eth.getBlock('latest');
+	return lastBlock.gasLimit
+}
+
 async function estimateGasRaw(inst, txOpts, bonus) {
 	txOpts = _.assign({}, txOpts, {
 			gasPrice: 1,
-			gasLimit: module.exports.MAX_GAS,
+			gasLimit: await getBlockGasLimit(inst),
 		});
 	bonus = (_.isNumber(bonus) ? bonus : inst.gasBonus) || 0;
 	const gas = await inst._web3.eth.estimateGas(normalizeTxOpts(txOpts));
@@ -166,7 +169,7 @@ async function callTx(inst, to, opts) {
 	const txOpts = await createTransactionOpts(inst, to, opts);
 	_.defaults(txOpts, {
 			gasPrice: 1,
-			gasLimit: module.exports.MAX_GAS
+			gasLimit: await getBlockGasLimit(inst)
 		});
 	if (!txOpts.to && (!txOpts.data || txOpts.data == '0x'))
 		throw Error('Transaction has no destination.');

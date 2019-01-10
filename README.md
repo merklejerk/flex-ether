@@ -297,5 +297,4 @@ change. Many of these can also be overridden in individual call options.
 ### Module Properties
 The following module properties affect gas calculations for all instances:
 
-- `MAX_GAS` Maximum gas limit for transactions. Defaults to `6721975`.
 - `MAX_GAS_PRICE` Maximum gas price for transactions. Defaults to `256` gwei.

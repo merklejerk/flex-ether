@@ -21,8 +21,7 @@ describe('flex-contract', function() {
 				};
 			});
 		provider = ganache.provider({
-			accounts: accounts,
-			gasLimit: '0x'+(FlexEther.MAX_GAS).toString(16)
+			accounts: accounts
 		});
 		// Suppress max listener warnings.
 		provider.setMaxListeners(4096);
