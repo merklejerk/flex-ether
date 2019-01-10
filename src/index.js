@@ -97,8 +97,8 @@ module.exports = class FlexEther {
 	}
 };
 
-module.exports.MAX_GAS = 6721975;
-module.exports.MAX_GAS_PRICE = new BigNumber('256e9').toString(10); // 200 gwei
+module.exports.MAX_GAS = 8e6;
+module.exports.MAX_GAS_PRICE = new BigNumber('256e9').toString(10); // 256 gwei
 module.exports.ens = ens;
 
 
