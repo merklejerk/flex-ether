@@ -113,8 +113,11 @@ function getWeb3(opts={}) {
 }
 
 async function getBlockGasLimit(inst) {
-	const lastBlock = await inst._web3.eth.getBlock('latest');
-	return lastBlock.gasLimit
+	while (true) {
+		const lastBlock = await inst._web3.eth.getBlock('latest');
+		if (lastBlock != null)
+			return lastBlock.gasLimit
+	}
 }
 
 async function estimateGasRaw(inst, txOpts, bonus) {
