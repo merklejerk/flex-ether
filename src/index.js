@@ -133,16 +133,20 @@ async function estimateGasRaw(inst, txOpts, bonus) {
 async function createTransactionOpts(inst, to, opts) {
 	const web3 = inst._web3;
 	let from = undefined;
-	if (opts.from)
+	if (opts.from === null) {
+		// Explicitly leaving it undefined.
+	} else if (_.isString(opts.from)) {
 		from = await inst.resolveAddress(opts.from);
-	else if (opts.key)
+	} else if (_.isNumber(opts.from)) {
+		from = opts.from;
+	} else if (opts.key)
 		from = util.privateKeyToAddress(opts.key);
 	else
 		from = await inst.getDefaultAccount();
 	to = to ? await inst.resolveAddress(to) : undefined;
 	return {
 		gasPrice: opts.gasPrice,
-		gasLimit: opts.gasLimit || opts.gas,
+		gas: opts.gasLimit || opts.gas,
 		value: opts.value || 0,
 		data: opts.data,
 		to: to,
@@ -151,19 +155,19 @@ async function createTransactionOpts(inst, to, opts) {
 }
 
 function normalizeTxOpts(opts) {
-	opts = _.cloneDeep(opts);
-	opts.gasPrice = util.toHex(opts.gasPrice || 0);
-	opts.gasLimit = util.toHex(opts.gasLimit || 0);
-	opts.value = util.toHex(opts.value || 0);
+	const _opts = {};
+	_opts.gasPrice = util.toHex(opts.gasPrice || 0);
+	_opts.gas = util.toHex(opts.gasLimit || opts.gas || 0);
+	_opts.value = util.toHex(opts.value || 0);
 	if (opts.data && opts.data != '0x')
-		opts.data = util.toHex(opts.data);
+		_opts.data = util.toHex(opts.data);
 	else
-		opts.data = '0x';
-	if (opts.to)
-		opts.to = ethjs.toChecksumAddress(opts.to);
-	if (opts.from)
-		opts.from = ethjs.toChecksumAddress(opts.from);
-	return opts;
+		_opts.data = '0x';
+	if (_.isString(opts.to))
+		_opts.to = ethjs.toChecksumAddress(opts.to);
+	if (_.isString(opts.from))
+		_opts.from = ethjs.toChecksumAddress(opts.from);
+	return _opts;
 }
 
 async function callTx(inst, to, opts) {
@@ -176,7 +180,10 @@ async function callTx(inst, to, opts) {
 		});
 	if (!txOpts.to && (!txOpts.data || txOpts.data == '0x'))
 		throw Error('Transaction has no destination.');
-	return inst._web3.eth.call(normalizeTxOpts(txOpts), block);
+	const _opts = normalizeTxOpts(txOpts);
+	if (_opts.data.startsWith('0xe273'))
+		console.log(_opts);
+	return inst._web3.eth.call(_opts, block);
 }
 
 async function sendTx(inst, to, opts) {
