@@ -159,6 +159,8 @@ function normalizeTxOpts(opts) {
 	_opts.gasPrice = util.toHex(opts.gasPrice || 0);
 	_opts.gas = util.toHex(opts.gasLimit || opts.gas || 0);
 	_opts.value = util.toHex(opts.value || 0);
+	if (!_.isNil(opts.nonce))
+		_opts.nonce = parseInt(opts.nonce);
 	if (opts.data && opts.data != '0x')
 		_opts.data = util.toHex(opts.data);
 	else
