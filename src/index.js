@@ -180,10 +180,7 @@ async function callTx(inst, to, opts) {
 		});
 	if (!txOpts.to && (!txOpts.data || txOpts.data == '0x'))
 		throw Error('Transaction has no destination.');
-	const _opts = normalizeTxOpts(txOpts);
-	if (_opts.data.startsWith('0xe273'))
-		console.log(_opts);
-	return inst._web3.eth.call(_opts, block);
+	return inst._web3.eth.call(normalizeTxOpts(txOpts), block);
 }
 
 async function sendTx(inst, to, opts) {
