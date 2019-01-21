@@ -138,7 +138,7 @@ describe('flex-contract', function() {
 		const to = randomAddress();
 		const amount = _.random(1, 100);
 		const r = await eth.call(to, amount);
-		assert.equal(r, '0x0');
+		assert.equal(r, '0x');
 	});
 
 	it('can get gas price', async function() {

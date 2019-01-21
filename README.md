@@ -64,11 +64,10 @@ eth = new FlexEther(
       // May be 'main', 'ropsten', 'rinkeby', or 'kovan'.
       // Defaults to 'main'
       network: String,
-      // Infura API Key to use.
-      // One will be generated if not defined.
+      // Infura Project ID, if not using a custom provider.
       infuraKey: String,
       // Connect to an existing provider at a URI
-      // (e.g., http://localhost:8545 or https://mainnet.infura.io/YOURAPIKEY).
+      // (e.g., http://localhost:8545 or https://mainnet.infura.io/v3/PROJECT_ID).
       // The 'net' option is required is using an IPC path.
       providerURI: String,
       // net instance, from require('net'), if using IPC path in providerURI
