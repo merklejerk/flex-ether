@@ -53,7 +53,7 @@ let gas = eth.estimateGas('0xf6fb5b73987d6d9a139e23bab97be6fc89e0dcd1', '100',
 ### Creating an instance
 By default, the instance will create an [Infura](https://infura.io) provider to
 talk to the main network. You can modify this behavior with the options
-`network`, `infuraKey`, `web3`, `provider`, or `providerURI`.
+`network`, `infuraKey`, `provider`, or `providerURI`.
 
 ##### Full options
 ```js
@@ -73,10 +73,10 @@ eth = new FlexEther(
       // net instance, from require('net'), if using IPC path in providerURI
       net: Object,
       // Use a custom provider instance (e.g., web3.currentProvider for metamask).
-      // Overrides all provider options.
       provider: Object,
-      // Use a custom web3 instance Overrides all provider options.
-      web3: Object,
+      // Clamp transaction gas prices to this amount (in wei).
+      // Defaults to 250 gwei.
+      maxGasPrice: string,
       // Fractional bonus to apply to gas price when making transactions.
       // 0.01 = +1%. May be negative to under-price.
       // Defaults to -0.005.
@@ -86,7 +86,16 @@ eth = new FlexEther(
       // 0.01 = +1%. May be negative, but probably not a good idea.
       // Defaults to 0.66.
       // Can be overridden in send/transfer calls.
-      gasBonus: Number
+      gasBonus: Number,
+      // ENS options.
+      ens: {
+          // Minimum number of seconds time to keep a resolved ENS name in cache.
+          // Defaults to one hour.
+          minTTL: Number,
+          // Maximum number of seconds time to keep a resolved ENS name in cache.
+          // Defaults to infinity.
+          maxTTL: Number,
+      }
    });
 ```
 
@@ -95,7 +104,7 @@ eth = new FlexEther(
 Ether can be sent with the `transfer()` or the lower-level `send()` methods.
 
 By default, transactions will be signed by the wallet associated with
-`web3.eth.defaultAccount` or `web3.eth.getAccounts()[0]`. You can override the
+the first account given by the provider. You can override the
 caller by either passing the `from` or `key` option. The `from` option will
 let the provider sign the transaction from an unlocked wallet, as usual.
 But, the `key` option will *self-sign* the transaction with the private key
@@ -269,23 +278,12 @@ ENS is only available on the main, ropsten, and rinkeby networks.
 The ENS address will also have to be set up with the ENS contract on the
 respective network to properly resolve.
 
-##### The ENS cache
-Once an address is resolved, the address will be cached for future calls.
-Each address has a TTL, or time-to-live, defined, which specifies how long
-the cache should be retained. However, many ENS registrations unintentionally
-leave the TTL at the default of `0`, which would imply no caching.
-So, by default, cache TTLs are clamped to be at least one hour. You can
-configure this behavior yourself by setting the
-`FlexEther.ens.minTTL` property to the minimum number of *milliseconds* to
-keep a cache entry.
-
 ### Instance Properties
 A contract instance exposes a few properties, most of which you are free to
 change. Many of these can also be overridden in individual call options.
 
 - `gasBonus (Number)` Gas limit estimate bonus for transactions, where `0.01 = +1%`. May be negative.
 - `gasPriceBonus (Number)` Gas price bonus for transactions, where `0.01 = +1%`. May be negative.
-- `web3 (Web3)` Web3 instance used.
 - `async getTransactionCount(addr)` Get the nonce for an account.
 - `async resolveBlockDirective(blockNum)` Resolve a block directive (e.g., `41204102` or `-2`) to a block number.
 - `async getChainId()` Get the chain ID of the connected network.

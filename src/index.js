@@ -1,56 +1,73 @@
 'use strict'
 const _ = require('lodash');
-const Web3 = require('web3');
-const ethjs = require('ethereumjs-util');
-const ethjstx = require('ethereumjs-tx');
-const cw3p = require('create-web3-provider');
-const ens = require('ez-ens');
-const util = require('./util');
-const BigNumber = require('bignumber.js');
 const assert = require('assert');
+const BigNumber = require('bignumber.js');
+const cw3p = require('create-web3-provider');
+const ethjstx = require('ethereumjs-tx');
+const ethjs = require('ethereumjs-util');
+
+const util = require('./util');
+const Resolver = require('./resolver');
+const RpcClient = require('./rpc-client');
+const createTransactionPromise = require('./transaction-promise');
 
 module.exports = class FlexEther {
 	constructor(opts={}) {
-		this.web3 = getWeb3(opts);
+		this.provider = opts.provider;
+		if (!this.provider) {
+			this.provider = cw3p({
+				uri: opts.providerURI,
+				net: opts.net
+			});
+		}
+		this._rpc = new RpcClient(this.provider);
+		this._resolver = new Resolver(this._rpc, opts.ens);
 		this.gasBonus = _.isNumber(opts.gasBonus) ? opts.gasBonus : 0.66;
 		this.gasPriceBonus = _.isNumber(opts.gasPriceBonus) ?
 			opts.gasPriceBonus : -0.005;
-	}
-
-	get web3() {
-		return this._web3;
-	}
-
-	set web3(inst) {
-		this._web3 = inst;
-		this._chainId = inst.eth.net.getId();
+		this.maxGasPrice = opts.maxGasPrice || new BigNumber('250e9').toString(10); // 250 gwei
 	}
 
 	async getChainId() {
-		return this._chainId;
+		return this._rpc.getChainId();
 	}
 
 	async getDefaultAccount() {
-		return this._web3.eth.defaultAccount || getFirstAccount(this._web3);
+		return this._rpc.getDefaultAccount();
 	}
 
 	async getTransactionCount(addr) {
-		addr = await this.resolveAddress(addr);
-		return this._web3.eth.getTransactionCount(addr);
+		addr = await this._resolver.resolve(addr);
+		return this._rpc.getTransactionCount(addr);
 	}
 
-	async getBalance(addr, block) {
-		addr = await this.resolveAddress(addr);
-		return (await this._web3.eth.getBalance(addr, block)).toString(10);
+	async getTransactionReceipt(txHash) {
+		return this._rpc.getTransactionReceipt(await txHash);
 	}
 
-	async getGasPrice(bonus=0, max=0) {
+	async getBalance(addr, block='latest') {
+		addr = await this._resolver.resolve(addr);
+		return this._rpc.getBalance(addr, await this.resolveBlockDirective(block));
+	}
+
+	async getGasPrice() {
+		return this._rpc.getGasPrice();
+	}
+
+	async getBlock(numberOrHash='latest') {
+		return this._rpc.getBlock(await this.resolveBlockDirective(numberOrHash));
+	}
+
+	async getBlockNumber() {
+		return this._rpc.getBlockNumber();
+	}
+
+	async _getGasPriceWithBonus(bonus) {
 		bonus = (_.isNumber(bonus) ? bonus : this.gasPriceBonus) || 0;
-		max = max || module.exports.MAX_GAS_PRICE;
-		const price = new BigNumber(await this._web3.eth.getGasPrice())
-			.times(1+bonus);
-		if (price.gt(max))
+		const price = new BigNumber(await this.getGasPrice()).times(1 + bonus);
+		if (price.gt(this.maxGasPrice)) {
 			price = new BigNumber(max);
+		}
 		return price.toString(10);
 	}
 
@@ -60,63 +77,58 @@ module.exports = class FlexEther {
 	}
 
 	send(to, opts={}) {
-		return wrapSendTxPromise(sendTx(this, to, opts));
+		return createTransactionPromise(this, sendTx(this, to, opts));
 	}
 
 	transfer(to, amount, opts) {
-		return wrapSendTxPromise(
-			sendTx(this, to, _.assign({}, opts, {value: amount})));
+		return createTransactionPromise(
+			this,
+			sendTx(
+				this,
+				to,
+				_.assign({}, opts, { value: amount })
+			)
+		);
 	}
 
-	call(to, opts={}) {
+	async call(to, opts={}) {
 		return callTx(this, to, opts);
 	}
 
 	async getBlockNumber() {
-		return this._web3.eth.getBlockNumber();
+		return this._rpc.getBlockNumber();
 	}
 
 	async resolveBlockDirective(block=-1) {
+		if (block === 'latest' || block === 'pending' || block === 'earliest') {
+			return block;
+		}
 		if (_.isNumber(block)) {
 			if (block < 0) {
-				let n = await this._web3.eth.getBlockNumber();
-				n += (block+1);
-				if (n < 0)
+				let n = await this._rpc.getBlockNumber();
+				n += block + 1;
+				if (n <= 0) {
 					throw Error(`Block number offset is too large: ${block}`);
+				}
 				return n;
 			}
 			return block;
 		}
-		return block;
+		throw new Error(`Invalid block directive: ${block}`);
 	}
 
-	async resolveAddress(addr) {
+	async resolve(addr) {
 		if (!addr)
 			throw new Error('Invalid address.');
-		return module.exports.ens.resolve(addr, {web3: this._web3});
+		return this._resolver.resolve(addr);
 	}
 };
 
-module.exports.MAX_GAS_PRICE = new BigNumber('256e9').toString(10); // 256 gwei
-module.exports.ens = ens;
-
-function getWeb3(opts={}) {
-	if (opts.web3)
-		return opts.web3;
-	const provider = opts.provider || cw3p({
-		uri: opts.providerURI,
-		network: opts.network,
-		net: opts.net,
-		infuraKey: opts.infuraKey
-	});
-	return new Web3(provider);
-}
-
 async function getBlockGasLimit(inst) {
 	while (true) {
-		const lastBlock = await inst._web3.eth.getBlock('latest');
+		const lastBlock = await inst.getBlock();
 		if (lastBlock != null)
-			return lastBlock.gasLimit
+			return lastBlock.gasLimit;
 	}
 }
 
@@ -126,24 +138,23 @@ async function estimateGasRaw(inst, txOpts, bonus) {
 			gasLimit: await getBlockGasLimit(inst),
 		});
 	bonus = (_.isNumber(bonus) ? bonus : inst.gasBonus) || 0;
-	const gas = await inst._web3.eth.estimateGas(normalizeTxOpts(txOpts));
+	const gas = await inst._rpc.estimateGas(normalizeTxOpts(txOpts));
 	return Math.ceil(gas * (1+bonus));
 }
 
 async function createTransactionOpts(inst, to, opts) {
-	const web3 = inst._web3;
 	let from = undefined;
 	if (opts.from === null) {
 		// Explicitly leaving it undefined.
 	} else if (_.isString(opts.from)) {
-		from = await inst.resolveAddress(opts.from);
+		from = await inst.resolve(opts.from);
 	} else if (_.isNumber(opts.from)) {
 		from = opts.from;
 	} else if (opts.key)
 		from = util.privateKeyToAddress(opts.key);
 	else
 		from = await inst.getDefaultAccount();
-	to = to ? await inst.resolveAddress(to) : undefined;
+	to = to ? await inst.resolve(to) : undefined;
 	return {
 		gasPrice: opts.gasPrice,
 		gas: opts.gasLimit || opts.gas,
@@ -182,7 +193,7 @@ async function callTx(inst, to, opts) {
 		});
 	if (!txOpts.to && (!txOpts.data || txOpts.data == '0x'))
 		throw Error('Transaction has no destination.');
-	return inst._web3.eth.call(normalizeTxOpts(txOpts), block);
+	return inst._rpc.call(normalizeTxOpts(txOpts), block);
 }
 
 async function sendTx(inst, to, opts) {
@@ -201,90 +212,13 @@ async function sendTx(inst, to, opts) {
 		txOpts.gasLimit = await estimateGasRaw(inst, txOpts, opts.gasBonus);
 	if (!txOpts.chainId)
 		txOpts.chainId = await inst._chainId;
-	let sent = null;
 	if (opts.key) {
 		// Sign the TX ourselves.
 		const tx = new ethjstx(normalizeTxOpts(txOpts));
 		tx.sign(ethjs.toBuffer(opts.key));
 		const serialized = util.toHex(tx.serialize());
-		sent = inst._web3.eth.sendSignedTransaction(serialized);
-	} else {
-		// Let the provider sign it.
-		sent = inst._web3.eth.sendTransaction(normalizeTxOpts(txOpts));
+		return inst._rpc.sendRawTransaction(serialized);
 	}
-	return {sent: sent};
-}
-
-async function getFirstAccount(web3) {
-	const accts = await web3.eth.getAccounts();
-	if (accts && accts.length)
-		return accts[0];
-}
-
-function wrapSendTxPromise(promise) {
-	// Resolved receipt object.
-	let receipt = undefined;
-	// Number of confirmations seen.
-	let confirmations = 0;
-	// Count confirmations.
-	promise.then(({sent}) => {
-		const handler = (n, _receipt) => {
-			receipt = _receipt;
-			confirmations = Math.max(confirmations, n);
-			// Don't listen beyond 12 confirmations.
-			if (n >= 12)
-				sent.removeAllListeners();
-		};
-		sent.on('confirmation', handler);
-	});
-	// Create a promise that resolves with the receipt.
-	const wrapper = new Promise(async (accept, reject) => {
-		promise.catch(reject);
-		promise.then(({sent, address}) => {
-			sent.on('error', reject);
-			sent.on('receipt', r=> {
-				if (!r.status)
-					return reject('Transaction failed.');
-				try {
-					return accept(r);
-				} catch (err) {
-					reject(err);
-				}
-			});
-		});
-	});
-	wrapper.receipt = wrapper;
-	// Create a promise that resolves with the transaction hash.
-	wrapper.txId = new Promise((accept, reject) => {
-		promise.catch(reject);
-		promise.then(({sent}) => {
-			sent.on('error', reject);
-			sent.on('transactionHash', accept);
-		});
-	});
-	// Create a function that creates a promise that resolves after a number of
-	// confirmations.
-	wrapper.confirmed = (count=1) => {
-			// Zero confirmations is the same as waiting on the receipt.
-			if (count == 0)
-				return wrapper.receipt;
-			if (count > 12)
-				throw new Error('Maximum confirmations is 12.');
-			// If we've already seen the confirmation, resolve immediately.
-			if (confirmations >= count && receipt) {
-				return Promise.resolve(receipt);
-			}
-			// Create a promise that'll get called by the confirmation handler.
-			return new Promise((accept, reject) => {
-				promise.catch(reject);
-				promise.then(({sent}) => {
-					sent.on('error', reject);
-					sent.on('confirmation', (_count, receipt) => {
-						if (_count == count)
-							accept(receipt);
-					});
-				});
-			});
-		};
-	return wrapper;
+	// Let the provider sign it.
+	return inst._rpc.sendTransaction(normalizeTxOpts(txOpts));
 }

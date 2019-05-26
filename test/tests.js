@@ -13,13 +13,15 @@ describe('flex-contract', function() {
 
 	before(async function() {
 		accounts = _.times(16, () => {
-				const key = crypto.randomBytes(32);
-				return {
-					secretKey: key,
-					address: ethjs.toChecksumAddress('0x'+ethjs.privateToAddress(key).toString('hex')),
-					balance: 100 + _.repeat('0', 18)
-				};
-			});
+			const key = crypto.randomBytes(32);
+			return {
+				secretKey: key,
+				address: ethjs.toChecksumAddress(
+					'0x'+ethjs.privateToAddress(key).toString('hex')
+				),
+				balance: 100 + _.repeat('0', 18)
+			};
+		});
 		provider = ganache.provider({
 			accounts: accounts
 		});
@@ -67,8 +69,9 @@ describe('flex-contract', function() {
 		const tx = eth.transfer(to, amount, {from: accounts[1].address});
 		await tx;
 		// Do some transactions to advance the block.
-		for (let i = 0; i < 4; i++)
+		for (let i = 0; i < 3; i++) {
 			await eth.transfer(randomAddress(), _.random(1, 100));
+		}
 		const receipt = await tx.confirmed(3);
 		assert.ok(receipt.transactionHash);
 	});
@@ -82,8 +85,9 @@ describe('flex-contract', function() {
 			return tx.confirmed(3);
 		})();
 		// Do some transactions to advance the block.
-		for (let i = 0; i < 4; i++)
+		for (let i = 0; i < 3; i++) {
 			await eth.transfer(randomAddress(), _.random(1, 100));
+		}
 		const receipt = await confirmed;
 		assert.ok(receipt.transactionHash);
 	});
@@ -139,6 +143,24 @@ describe('flex-contract', function() {
 		const amount = _.random(1, 100);
 		const r = await eth.call(to, amount);
 		assert.equal(r, '0x');
+	});
+
+	it('can get balance from a prior block number', async function() {
+		const eth = new FlexEther({provider: provider});
+		const to = randomAddress();
+		const blockNumber = await eth.getBlockNumber();
+		const amount = _.random(100, 1000);
+		const balance = await eth.getBalance(to, blockNumber);
+		assert.equal(balance, '0');
+	});
+
+	it('can get balance from a prior block number by offset', async function() {
+		const eth = new FlexEther({provider: provider});
+		const to = randomAddress();
+		const blockNumber = await eth.getBlockNumber();
+		const amount = _.random(100, 1000);
+		const balance = await eth.getBalance(to, -1);
+		assert.equal(balance, '0');
 	});
 
 	it('can get gas price', async function() {
