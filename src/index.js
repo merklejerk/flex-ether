@@ -20,8 +20,8 @@ module.exports = class FlexEther {
 				net: opts.net
 			});
 		}
-		this._rpc = new RpcClient(this.provider);
-		this._resolver = new Resolver(this._rpc, opts.ens);
+		this.rpc = new RpcClient(this.provider);
+		this._resolver = new Resolver(this.rpc, opts.ens);
 		this.gasBonus = _.isNumber(opts.gasBonus) ? opts.gasBonus : 0.66;
 		this.gasPriceBonus = _.isNumber(opts.gasPriceBonus) ?
 			opts.gasPriceBonus : -0.005;
@@ -29,37 +29,37 @@ module.exports = class FlexEther {
 	}
 
 	async getChainId() {
-		return this._rpc.getChainId();
+		return this.rpc.getChainId();
 	}
 
 	async getDefaultAccount() {
-		return this._rpc.getDefaultAccount();
+		return this.rpc.getDefaultAccount();
 	}
 
 	async getTransactionCount(addr) {
 		addr = await this._resolver.resolve(addr);
-		return this._rpc.getTransactionCount(addr);
+		return this.rpc.getTransactionCount(addr);
 	}
 
 	async getTransactionReceipt(txHash) {
-		return this._rpc.getTransactionReceipt(await txHash);
+		return this.rpc.getTransactionReceipt(await txHash);
 	}
 
 	async getBalance(addr, block='latest') {
 		addr = await this._resolver.resolve(addr);
-		return this._rpc.getBalance(addr, await this.resolveBlockDirective(block));
+		return this.rpc.getBalance(addr, await this.resolveBlockDirective(block));
 	}
 
 	async getGasPrice() {
-		return this._rpc.getGasPrice();
+		return this.rpc.getGasPrice();
 	}
 
 	async getBlock(numberOrHash='latest') {
-		return this._rpc.getBlock(await this.resolveBlockDirective(numberOrHash));
+		return this.rpc.getBlock(await this.resolveBlockDirective(numberOrHash));
 	}
 
 	async getBlockNumber() {
-		return this._rpc.getBlockNumber();
+		return this.rpc.getBlockNumber();
 	}
 
 	async _getGasPriceWithBonus(bonus) {
@@ -96,7 +96,7 @@ module.exports = class FlexEther {
 	}
 
 	async getBlockNumber() {
-		return this._rpc.getBlockNumber();
+		return this.rpc.getBlockNumber();
 	}
 
 	async resolveBlockDirective(block=-1) {
@@ -105,7 +105,7 @@ module.exports = class FlexEther {
 		}
 		if (_.isNumber(block)) {
 			if (block < 0) {
-				let n = await this._rpc.getBlockNumber();
+				let n = await this.rpc.getBlockNumber();
 				n += block + 1;
 				if (n <= 0) {
 					throw Error(`Block number offset is too large: ${block}`);
@@ -138,7 +138,7 @@ async function estimateGasRaw(inst, txOpts, bonus) {
 			gasLimit: await getBlockGasLimit(inst),
 		});
 	bonus = (_.isNumber(bonus) ? bonus : inst.gasBonus) || 0;
-	const gas = await inst._rpc.estimateGas(normalizeTxOpts(txOpts));
+	const gas = await inst.rpc.estimateGas(normalizeTxOpts(txOpts));
 	return Math.ceil(gas * (1+bonus));
 }
 
@@ -167,13 +167,13 @@ async function createTransactionOpts(inst, to, opts) {
 
 function normalizeTxOpts(opts) {
 	const _opts = {};
-	_opts.gasPrice = util.toHex(opts.gasPrice || 0);
-	_opts.gas = util.toHex(opts.gasLimit || opts.gas || 0);
-	_opts.value = util.toHex(opts.value || 0);
+	_opts.gasPrice = util.asHex(opts.gasPrice || 0);
+	_opts.gas = util.asHex(opts.gasLimit || opts.gas || 0);
+	_opts.value = util.asHex(opts.value || 0);
 	if (!_.isNil(opts.nonce))
 		_opts.nonce = parseInt(opts.nonce);
 	if (opts.data && opts.data != '0x')
-		_opts.data = util.toHex(opts.data);
+		_opts.data = util.asHex(opts.data);
 	else
 		_opts.data = '0x';
 	if (_.isString(opts.to))
@@ -193,7 +193,7 @@ async function callTx(inst, to, opts) {
 		});
 	if (!txOpts.to && (!txOpts.data || txOpts.data == '0x'))
 		throw Error('Transaction has no destination.');
-	return inst._rpc.call(normalizeTxOpts(txOpts), block);
+	return inst.rpc.call(normalizeTxOpts(txOpts), block);
 }
 
 async function sendTx(inst, to, opts) {
@@ -216,9 +216,11 @@ async function sendTx(inst, to, opts) {
 		// Sign the TX ourselves.
 		const tx = new ethjstx(normalizeTxOpts(txOpts));
 		tx.sign(ethjs.toBuffer(opts.key));
-		const serialized = util.toHex(tx.serialize());
-		return inst._rpc.sendRawTransaction(serialized);
+		const serialized = util.asBytes(tx.serialize());
+		return inst.rpc.sendRawTransaction(serialized);
 	}
 	// Let the provider sign it.
-	return inst._rpc.sendTransaction(normalizeTxOpts(txOpts));
+	return inst.rpc.sendTransaction(normalizeTxOpts(txOpts));
 }
+
+module.exports.util = util;

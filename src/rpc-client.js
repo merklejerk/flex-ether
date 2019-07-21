@@ -3,6 +3,17 @@ const _ = require('lodash');
 const ethjs = require('ethereumjs-util');
 const promisify = require('util').promisify;
 
+const {
+	asAddress,
+	asBlockNumber,
+	toUnsigned,
+	toNumber,
+	isHash,
+	asHash,
+	asHex,
+	asBytes
+} = require('./util');
+
 module.exports = class RpcClient {
 	constructor(provider) {
 		this.provider = provider;
@@ -190,80 +201,6 @@ function normalizeReceipt(block) {
 	return block;
 }
 
-const HASH_REGEX = /^0x([0-9a-f]{2}){32}$/i;
-const HEX_REGEX = /^0x[0-9a-f]*$/i;
-const UNSIGNED_REGEX = /^[0-9]+$/;
-
-function isHash(v) {
-	return typeof(v) === 'string' && HASH_REGEX.test(v);
-}
-
-function asAddress(v) {
-	if (!ethjs.isValidAddress(v)) {
-		throw new InvalidAddressError(v);
-	}
-	return v;
-}
-
-function asHash(v) {
-	if (!isHash(v)) {
-		throw new InvalidHashError(v);
-	}
-	return v;
-}
-
-function asBlockNumber(v) {
-	if (_.isNil(v)) {
-		return 'latest';
-	}
-	if (v === 'latest' || v === 'pending' || v === 'earliest') {
-		return v;
-	}
-	try {
-		return asHex(v);
-	} catch (err) {
-		throw new InvalidBlockNumberError(v);
-	}
-}
-
-function asBytes(v) {
-	if (v == '0x') {
-		return v;
-	}
-	if (!HEX_REGEX.test(v)) {
-		throw new InvalidBytesError(v);
-	}
-	return ethjs.bufferToHex(ethjs.toBuffer(v));
-}
-
-function asHex(v) {
-	const bn = toBN(v);
-	return '0x' + bn.toString(16);
-}
-
-function toNumber(v) {
-	return _.toNumber(v);
-}
-
-function toUnsigned(v) {
-	return toBN(v).toString(10);
-}
-
-function toBN(v) {
-	if (typeof(v) === 'number') {
-		return new ethjs.BN(v);
-	}
-	if (typeof(v) === 'string') {
-		if (HEX_REGEX.test(v)) {
-			return new ethjs.BN(v.substr(2), 16);
-		}
-		if (UNSIGNED_REGEX.test(v)) {
-			return new ethjs.BN(v);
-		}
-	}
-	throw new InvalidUnsignedError(v);
-}
-
 class RpcError extends Error {
 	constructor(msg) {
 		super(msg);
@@ -271,51 +208,4 @@ class RpcError extends Error {
 	}
 };
 
-class InvalidAddressError extends Error {
-	constructor(v) {
-		super(`Invalid address: ${JSON.stringify(v)}`);
-		this.name = this.constructor.name;
-	}
-};
-
-class InvalidHashError extends Error {
-	constructor(v) {
-		super(`Invalid hash: ${JSON.stringify(v)}`);
-		this.name = this.constructor.name;
-	}
-};
-
-class InvalidBlockNumberError extends Error {
-	constructor(v) {
-		super(`Invalid block number: ${JSON.stringify(v)}`);
-		this.name = this.constructor.name;
-	}
-};
-
-class InvalidNumberError extends Error {
-	constructor(v) {
-		super(`Invalid number: ${JSON.stringify(v)}`);
-		this.name = this.constructor.name;
-	}
-};
-
-class InvalidUnsignedError extends Error {
-	constructor(v) {
-		super(`Invalid unsigned number: ${JSON.stringify(v)}`);
-		this.name = this.constructor.name;
-	}
-};
-
-class InvalidBytesError extends Error {
-	constructor(v) {
-		super(`Invalid bytes: ${JSON.stringify(v)}`);
-		this.name = this.constructor.name;
-	}
-};
-
 module.exports.RpcError = RpcError;
-module.exports.InvalidAddressError = InvalidAddressError;
-module.exports.InvalidHashError = InvalidHashError;
-module.exports.InvalidBlockNumberError = InvalidBlockNumberError;
-module.exports.InvalidNumberError = InvalidNumberError;
-module.exports.InvalidUnsignedError = InvalidUnsignedError;
