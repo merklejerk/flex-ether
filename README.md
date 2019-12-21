@@ -1,5 +1,5 @@
-![build status](https://travis-ci.org/merklejerk/flex-ether.svg?branch=master)
-![npm package](https://badge.fury.io/js/flex-ether.svg)
+[![build status](https://travis-ci.org/merklejerk/flex-ether.svg?branch=master)](https://travis-ci.org/merklejerk/flex-ether)
+[![npm package](https://badge.fury.io/js/flex-ether.svg)](https://www.npmjs.com/package/flex-ether)
 
 # flex-ether
 A modern, flexible Ethereum library for sending ethereum transactions that:
@@ -49,6 +49,7 @@ let gas = eth.estimateGas('0xf6fb5b73987d6d9a139e23bab97be6fc89e0dcd1', '100',
 - [Estimating gas](#estimating-gas)
 - [ENS addresses](#ens-addresses)
 - [Instance Properties](#instance-properties)
+- [Other Methods](#other-methods)
 
 ### Creating an instance
 By default, the instance will create an [Infura](https://infura.io) provider to
@@ -284,12 +285,16 @@ change. Many of these can also be overridden in individual call options.
 
 - `gasBonus (Number)` Gas limit estimate bonus for transactions, where `0.01 = +1%`. May be negative.
 - `gasPriceBonus (Number)` Gas price bonus for transactions, where `0.01 = +1%`. May be negative.
+
+### Other Methods
 - `async getTransactionCount(addr)` Get the nonce for an account.
 - `async resolveBlockDirective(blockNum)` Resolve a block directive (e.g., `41204102` or `-2`) to a block number.
 - `async getChainId()` Get the chain ID of the connected network.
 - `async resolveAddress(addr)` Resolve an ENS address. If a regular address is passed, the checksummed version will be returned.
 - `async getBlockNumber()` Get the current block number.
 - `async getDefaultAccount()` Get the default account, set by the provider.
+- `async getCode(addr, block='latest')` Get the code bytes at `addr`.
+- `async getPastLogs(filter)` Get past logs using `filter`, as defined by a filter object similar to the [JSONRPC spec](https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getlogs).
 
 ### Module Properties
 The following module properties affect gas calculations for all instances:
