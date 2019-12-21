@@ -169,7 +169,7 @@ module.exports = class RpcClient {
 			'eth_getTransactionReceipt',
 			[ asHash(txHash) ],
 		);
-		return normalizeReceipt(result);
+		return result ? normalizeReceipt(result) : result;
 	}
 
 	async getChainId() {
@@ -189,21 +189,22 @@ module.exports = class RpcClient {
 		if (numArgs > 1) {
 			sendPayload = promisify(sendPayload);
 		}
-		const { result } = await sendPayload({
+		const response = await sendPayload({
 			jsonrpc: "2.0",
 			id: this._nextRpcId++,
 			method: method,
 			params: params,
 		});
-		if (!result) {
+		if (response.error) {
 			throw new RpcError(
 				[
 					`method=${JSON.stringify(method)}`,
 					`params=${JSON.stringify(params)}`,
+					`error="${(response.error || {}).message}"`,
 				].join(', '),
 			);
 		}
-		return result;
+		return response.result;
 	}
 }
 

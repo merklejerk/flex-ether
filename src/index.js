@@ -32,7 +32,7 @@ module.exports = class FlexEther {
 	}
 
 	async getChainId() {
-		return this.rpc.getChainId();
+		return this._chainId || (this._chainId = await this.rpc.getChainId());
 	}
 
 	async getDefaultAccount() {
@@ -240,7 +240,10 @@ async function sendTx(inst, to, opts) {
 		txOpts.chainId = await inst._chainId;
 	if (opts.key) {
 		// Sign the TX ourselves.
-		const tx = new ethjstx(normalizeTxOpts(txOpts));
+		const tx = new ethjstx(
+			normalizeTxOpts(txOpts),
+			{ chain: await inst.getChainId(), hardfork: 'istanbul' },
+		);
 		tx.sign(ethjs.toBuffer(opts.key));
 		const serialized = util.asBytes(tx.serialize());
 		return inst.rpc.sendRawTransaction(serialized);
