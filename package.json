@@ -1,6 +1,6 @@
 {
 	"name": "flex-ether",
-	"version": "1.6.2",
+	"version": "1.6.3",
 	"description": "A modern, flexible library for sending ethereum transactions.",
 	"main": "src/index.js",
 	"repository": {
@@ -18,6 +18,7 @@
 	"dependencies": {
 		"bignumber.js": "^9.0.0",
 		"create-web3-provider": "^1.5.4",
+		"ethereumjs-common": "^1.5.0",
 		"ethereumjs-tx": "^2.1.2",
 		"ethereumjs-util": "^6.2.0",
 		"lodash": "^4.17.15"

@@ -4,6 +4,7 @@ const assert = require('assert');
 const BigNumber = require('bignumber.js');
 const cw3p = require('create-web3-provider');
 const ethjstx = require('ethereumjs-tx').Transaction;
+const ethjscom = require('ethereumjs-common').default;
 const ethjs = require('ethereumjs-util');
 
 const util = require('./util');
@@ -33,6 +34,21 @@ module.exports = class FlexEther {
 
 	async getChainId() {
 		return this._chainId || (this._chainId = await this.rpc.getChainId());
+	}
+
+	async _getChainCommon() {
+		if (!this._chainCommon) {
+			const chainId = await this.getChainId();
+			this._chainCommon = ethjscom.forCustomChain(
+				'mainnet',
+				{
+					chainId,
+					name: `FlexEther-Istanbul-${chainId}`,
+				},
+				'istanbul',
+			);
+		}
+		return this._chainCommon;
 	}
 
 	async getDefaultAccount() {
@@ -242,7 +258,7 @@ async function sendTx(inst, to, opts) {
 		// Sign the TX ourselves.
 		const tx = new ethjstx(
 			normalizeTxOpts(txOpts),
-			{ chain: await inst.getChainId(), hardfork: 'istanbul' },
+			{ common: await inst._getChainCommon() },
 		);
 		tx.sign(ethjs.toBuffer(opts.key));
 		const serialized = util.asBytes(tx.serialize());
