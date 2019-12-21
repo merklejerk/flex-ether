@@ -3,7 +3,7 @@ const _ = require('lodash');
 const assert = require('assert');
 const BigNumber = require('bignumber.js');
 const cw3p = require('create-web3-provider');
-const ethjstx = require('ethereumjs-tx');
+const ethjstx = require('ethereumjs-tx').Transaction;
 const ethjs = require('ethereumjs-util');
 
 const util = require('./util');
@@ -46,20 +46,43 @@ module.exports = class FlexEther {
 	}
 
 	async getBalance(addr, block='latest') {
-		addr = await this._resolver.resolve(addr);
-		return this.rpc.getBalance(addr, await this.resolveBlockDirective(block));
+		return this.rpc.getBalance(
+			await this.resolve(addr),
+			await this.resolveBlockDirective(block),
+		);
 	}
 
 	async getGasPrice() {
 		return this.rpc.getGasPrice();
 	}
 
+	async getPastLogs(filter) {
+		return this.rpc.getLogs({
+			...filter,
+			fromBlock: !_.isNil(filter.fromBlock) ?
+				await this.resolveBlockDirective(filter.fromBlock) : undefined,
+			toBlock: !_.isNil(filter.toBlock) ?
+				await this.resolveBlockDirective(filter.toBlock) : undefined,
+			address: !_.isNil(filter.address) ?
+				await this.resolve(filter.address) : undefined,
+		});
+	}
+
 	async getBlock(numberOrHash='latest') {
-		return this.rpc.getBlock(await this.resolveBlockDirective(numberOrHash));
+		return this.rpc.getBlock(
+			await this.resolveBlockDirective(numberOrHash),
+		);
 	}
 
 	async getBlockNumber() {
 		return this.rpc.getBlockNumber();
+	}
+
+	async getCode(addr, block='latest') {
+		return this.rpc.getCode(
+			await this.resolve(addr),
+			await this.resolveBlockDirective(block),
+		);
 	}
 
 	async _getGasPriceWithBonus(bonus) {
@@ -167,13 +190,13 @@ async function createTransactionOpts(inst, to, opts) {
 
 function normalizeTxOpts(opts) {
 	const _opts = {};
-	_opts.gasPrice = util.asHex(opts.gasPrice || 0);
-	_opts.gas = util.asHex(opts.gasLimit || opts.gas || 0);
-	_opts.value = util.asHex(opts.value || 0);
+	_opts.gasPrice = util.toHex(opts.gasPrice || 0);
+	_opts.gas = util.toHex(opts.gasLimit || opts.gas || 0);
+	_opts.value = util.toHex(opts.value || 0);
 	if (!_.isNil(opts.nonce))
-		_opts.nonce = parseInt(opts.nonce);
+		_opts.nonce = util.toHex(opts.nonce);
 	if (opts.data && opts.data != '0x')
-		_opts.data = util.asHex(opts.data);
+		_opts.data = util.toHex(opts.data);
 	else
 		_opts.data = '0x';
 	if (_.isString(opts.to))

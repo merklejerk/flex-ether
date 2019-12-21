@@ -6,12 +6,13 @@ const promisify = require('util').promisify;
 const {
 	asAddress,
 	asBlockNumber,
-	toUnsigned,
-	toNumber,
 	isHash,
+	asBytes,
 	asHash,
-	asHex,
-	asBytes
+	toHex,
+	toChecksumAddress,
+	toNumber,
+	toUnsigned,
 } = require('./util');
 
 module.exports = class RpcClient {
@@ -30,21 +31,55 @@ module.exports = class RpcClient {
 	}
 
 	async getTransactionCount(by, blockNumber='latest') {
-		return toNumber(await this._send('eth_getTransactionCount',
+		return toNumber(await this._send(
+			'eth_getTransactionCount',
 			[
 				asAddress(by),
-				asBlockNumber(blockNumber)
-			]
+				asBlockNumber(blockNumber),
+			],
 		));
 	}
 
 	async getBalance(by, blockNumber='latest') {
-		return toUnsigned(await this._send('eth_getBalance',
+		return toUnsigned(await this._send(
+			'eth_getBalance',
 			[
 				asAddress(by),
-				asBlockNumber(blockNumber)
-			]
+				asBlockNumber(blockNumber),
+			],
 		));
+	}
+
+	async getCode(at, blockNumber='latest') {
+		return asBytes(await this._send(
+			'eth_getCode',
+			[
+				asAddress(at),
+				asBlockNumber(blockNumber),
+			],
+		));
+	}
+
+	async getLogs(filter) {
+		const result = await this._send(
+			'eth_getLogs',
+			[
+				{
+					fromBlock: !_.isNil(filter.fromBlock) ?
+						asBlockNumber(filter.fromBlock) : undefined,
+					toBlock: !_.isNil(filter.toBlock) ?
+						asBlockNumber(filter.toBlock) : undefined,
+					address: !_.isNil(filter.address) ?
+						asAddress(filter.address) : undefined,
+					blockhash: !_.isNil(filter.blockhash) ?
+						asHash(filter.blockhash) : undefined,
+					topics: _.isArray(filter.topics) ?
+						filter.topics.map(t => !_.isNil(t) ? toHex(t) : null) :
+						[],
+				}
+			],
+		);
+		return result.map(log => normalizeLog(log));
 	}
 
 	async getGasPrice() {
@@ -58,78 +93,81 @@ module.exports = class RpcClient {
 	async getBlock(numberOrHash='latest') {
 		let result;
 		if (isHash(numberOrHash)) {
-			result = await this._send('eth_getBlockByHash',
+			result = await this._send(
+				'eth_getBlockByHash',
 				[
 					asHash(numberOrHash),
-					false
-				]
+					false,
+				],
 			);
 		} else {
-			result = await this._send('eth_getBlockByNumber',
+			result = await this._send(
+				'eth_getBlockByNumber',
 				[
 					asBlockNumber(numberOrHash),
-					false
-				]
+					false,
+				],
 			);
 		}
 		return normalizeBlock(result);
 	}
 
 	async estimateGas(tx) {
-		return toNumber(await this._send('eth_estimateGas',
+		return toNumber(await this._send(
+			'eth_estimateGas',
 			[{
-				to: asAddress(tx.to),
+				to: !_.isNil(tx.to) ? asAddress(tx.to) : undefined,
 				from: !_.isNil(tx.from) ? asAddress(tx.from) : undefined,
-				gas: !_.isNil(tx.gas) ? asHex(tx.gas) : undefined,
-				gasPrice: !_.isNil(tx.gasPrice) ? asHex(tx.gasPrice) : undefined,
-				value: !_.isNil(tx.value) ? asHex(tx.value) : undefined,
+				gas: !_.isNil(tx.gas) ? toHex(tx.gas) : undefined,
+				gasPrice: !_.isNil(tx.gasPrice) ? toHex(tx.gasPrice) : undefined,
+				value: !_.isNil(tx.value) ? toHex(tx.value) : undefined,
 				data: !_.isNil(tx.data) ? asBytes(tx.data) : undefined,
-			}]
+			}],
 		));
 	}
 
 	async call(tx, blockNumber='latest') {
-		return await this._send('eth_call',
+		return await this._send(
+			'eth_call',
 			[
 				{
-					to: asAddress(tx.to),
+					to: !_.isNil(tx.to) ? asAddress(tx.to) : undefined,
 					from: !_.isNil(tx.from) ? asAddress(tx.from) : undefined,
-					gas: !_.isNil(tx.gas) ? asHex(tx.gas) : undefined,
-					gasPrice: !_.isNil(tx.gasPrice) ? asHex(tx.gasPrice) : undefined,
-					value: !_.isNil(tx.value) ? asHex(tx.value) : undefined,
+					gas: !_.isNil(tx.gas) ? toHex(tx.gas) : undefined,
+					gasPrice: !_.isNil(tx.gasPrice) ? toHex(tx.gasPrice) : undefined,
+					value: !_.isNil(tx.value) ? toHex(tx.value) : undefined,
 					data: !_.isNil(tx.data) ? asBytes(tx.data) : undefined,
 				},
-				asBlockNumber(blockNumber)
-			]
+				asBlockNumber(blockNumber),
+			],
 		);
 	}
 
 	async sendTransaction(tx) {
 		return this._send('eth_sendTransaction',
 			[{
-				to: asAddress(tx.to),
+				to: !_.isNil(tx.to) ? asAddress(tx.to) : undefined,
 				from: !_.isNil(tx.from) ? asAddress(tx.from) : undefined,
-				gas: !_.isNil(tx.gas) ? asHex(tx.gas) : undefined,
-				gasPrice: !_.isNil(tx.gasPrice) ? asHex(tx.gasPrice) : undefined,
-				value: !_.isNil(tx.value) ? asHex(tx.value) : undefined,
+				gas: !_.isNil(tx.gas) ? toHex(tx.gas) : undefined,
+				gasPrice: !_.isNil(tx.gasPrice) ? toHex(tx.gasPrice) : undefined,
+				nonce: !_.isNil(tx.nonce) ? toHex(tx.nonce) : undefined,
+				value: !_.isNil(tx.value) ? toHex(tx.value) : undefined,
 				data: !_.isNil(tx.data) ? asBytes(tx.data) : undefined,
-			}]
+			}],
 		);
 	}
 
 	async sendRawTransaction(raw) {
-		return this._send('eth_sendRawTransaction',
-			[
-				asBytes(raw)
-			]
+		return this._send(
+			'eth_sendRawTransaction',
+			[ asBytes(raw) ],
 		);
 	}
 
 	async getTransactionReceipt(txHash) {
-		const result = await this._send('eth_getTransactionReceipt',
-			[
-				asHash(txHash)
-			]
+		const result = await this._send(
+			'eth_getTransactionReceipt',
+			[ asHash(txHash) ],
 		);
 		return normalizeReceipt(result);
 	}
@@ -155,50 +193,56 @@ module.exports = class RpcClient {
 			jsonrpc: "2.0",
 			id: this._nextRpcId++,
 			method: method,
-			params: params
+			params: params,
 		});
 		if (!result) {
 			throw new RpcError(
 				[
 					`method=${JSON.stringify(method)}`,
-					`params=${JSON.stringify(params)}`
-				].join(', ')
+					`params=${JSON.stringify(params)}`,
+				].join(', '),
 			);
 		}
 		return result;
 	}
 }
 
-const BLOCK_NUMBER_FIELDS = [
-	'difficulty',
-	'gasLimit',
-	'gasUsed',
-	'number',
-	'size',
-	'timestamp',
-	'totalDifficulty'
-];
-
 function normalizeBlock(block) {
-	for (const field of BLOCK_NUMBER_FIELDS) {
-		block[field] = toNumber(block[field]);
-	}
-	return block;
+	return {
+		...block,
+		difficulty: toNumber(block.difficulty),
+		gasLimit: toNumber(block.gasLimit),
+		gasUsed: toNumber(block.gasUsed),
+		number: toNumber(block.number),
+		size: toNumber(block.size),
+		timestamp: toNumber(block.timestamp),
+		totalDifficulty: toNumber(block.totalDifficulty),
+		miner: toChecksumAddress(block.miner),
+	};
 }
 
-const RECEIPT_NUMBER_FIELDS = [
-	'blockNumber',
-	'cumulativeGasUsed',
-	'gasUsed',
-	'status',
-	'transactionIndex'
-];
+function normalizeReceipt(receipt) {
+	return {
+		...receipt,
+		blockNumber: toNumber(receipt.blockNumber),
+		cumulativeGasUsed: toNumber(receipt.cumulativeGasUsed),
+		gasUsed: toNumber(receipt.gasUsed),
+		status: toNumber(receipt.status),
+		transactionIndex: toNumber(receipt.transactionIndex),
+		contractAddress: !_.isNil(receipt.contractAddress) ?
+			toChecksumAddress(receipt.contractAddress) : undefined,
+		logs: receipt.logs.map(log => normalizeLog(log)),
+	};
+}
 
-function normalizeReceipt(block) {
-	for (const field of RECEIPT_NUMBER_FIELDS) {
-		block[field] = toNumber(block[field]);
-	}
-	return block;
+function normalizeLog(log) {
+	return {
+		...log,
+		address: toChecksumAddress(log.address),
+		blockNumber: toNumber(log.blockNumber),
+		logIndex: toNumber(log.logIndex),
+		transactionIndex: toNumber(log.transactionIndex),
+	};
 }
 
 class RpcError extends Error {

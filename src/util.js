@@ -7,8 +7,13 @@ const HEX_REGEX = /^0x[0-9a-f]*$/i;
 const UNSIGNED_REGEX = /^[0-9]+$/;
 
 function privateKeyToAddress(key) {
-	return ethjs.toChecksumAddress(
-		'0x'+(ethjs.privateToAddress(ethjs.toBuffer(key)).toString('hex')));
+	return toChecksumAddress(
+		'0x'+(ethjs.privateToAddress(ethjs.toBuffer(key)).toString('hex')),
+	);
+}
+
+function toChecksumAddress(addr) {
+	return ethjs.toChecksumAddress(addr);
 }
 
 function isHash(v) {
@@ -37,7 +42,7 @@ function asBlockNumber(v) {
 		return v;
 	}
 	try {
-		return asHex(v);
+		return toHex(v);
 	} catch (err) {
 		throw new InvalidBlockNumberError(v);
 	}
@@ -58,9 +63,14 @@ function asBytes(v) {
 	throw new InvalidBytesError(v);
 }
 
-function asHex(v) {
-	const bn = toBN(v);
-	return '0x' + bn.toString(16);
+function toHex(v) {
+	if (typeof(v) === 'string' && HEX_REGEX.test(v)) {
+		return v.toLowerCase();
+	}
+	if (_.isBuffer(v)) {
+		return ethjs.bufferToHex(v);
+	}
+	return '0x' + toBN(v).toString(16);
 }
 
 function toNumber(v) {
@@ -132,16 +142,17 @@ class InvalidBytesError extends Error {
 };
 
 module.exports = {
-	privateKeyToAddress: privateKeyToAddress,
-	isHash: isHash,
-	asHash: asHash,
-	asAddress: asAddress,
-	asBlockNumber: asBlockNumber,
-	asBytes: asBytes,
-	asHex: asHex,
-	toNumber: toNumber,
-	toUnsigned: toUnsigned,
-	toBN: toBN,
+	privateKeyToAddress,
+	isHash,
+	asHash,
+	asAddress,
+	asBlockNumber,
+	asBytes,
+	toHex,
+	toChecksumAddress,
+	toNumber,
+	toUnsigned,
+	toBN,
 	InvalidAddressError,
 	InvalidHashError,
 	InvalidBlockNumberError,
