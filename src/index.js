@@ -199,7 +199,7 @@ async function createTransactionOpts(inst, to, opts) {
 	to = to ? await inst.resolve(to) : undefined;
 	return {
 		gasPrice: opts.gasPrice,
-		gas: opts.gasLimit || opts.gas,
+		gasLimit: opts.gasLimit || opts.gas,
 		value: opts.value || 0,
 		data: opts.data,
 		to: to,
