@@ -189,12 +189,16 @@ module.exports = class RpcClient {
 		if (numArgs > 1) {
 			sendPayload = promisify(sendPayload);
 		}
+		const id = Math.floor(Math.random() * 2**64);
 		const response = await sendPayload({
 			jsonrpc: "2.0",
-			id: this._nextRpcId++,
+			id,
 			method: method,
 			params: params,
 		});
+		if (response.id !== id) {
+			throw new RpcError(`Expected RPC id=${id} but got id=${response.id}`);
+		}
 		if (response.error) {
 			throw new RpcError(
 				[
