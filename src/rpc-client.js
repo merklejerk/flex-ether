@@ -126,7 +126,7 @@ module.exports = class RpcClient {
 		));
 	}
 
-	async call(tx, blockNumber='latest') {
+	async call(tx, blockNumber='latest', overrides=undefined) {
 		return await this._send(
 			'eth_call',
 			[
@@ -139,6 +139,15 @@ module.exports = class RpcClient {
 					data: !_.isNil(tx.data) ? asBytes(tx.data) : undefined,
 				},
 				asBlockNumber(blockNumber),
+				...(overrides
+					? [
+						_.zipObject(
+							Object.keys(overrides).map(k => asAddress(k)),
+							Object.values(overrides).map(v => marshallStateOverride(v)),
+						),
+					]
+					: []
+				),
 			],
 		);
 	}
@@ -210,6 +219,24 @@ module.exports = class RpcClient {
 		}
 		return response.result;
 	}
+}
+
+function marshallStateOverride(override) {
+	return _.merge(
+		{ ...override },
+		{
+			balance: _.isNil(override.balance) ? undefined : toHex(override.balance),
+			nonce: _.isNil(override.nonce) ? undefined : toHex(override.nonce),
+			state: _.isNil(override.state) ? undefined : _.zipObject(
+				Object.keys(override.state).map(k => toHex(k)),
+				Object.values(override.state).map(v => toHex(v)),
+			),
+			stateDiff: _.isNil(override.stateDiff) ? undefined : _.zipObject(
+				Object.keys(override.stateDiff).map(k => toHex(k)),
+				Object.values(override.stateDiff).map(v => toHex(v)),
+			),
+		},
+	);
 }
 
 function normalizeBlock(block) {

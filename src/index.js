@@ -66,7 +66,7 @@ module.exports = class FlexEther {
 
 	async getBalance(addr, block='latest') {
 		return this.rpc.getBalance(
-			await this.resolve(addr),
+			await this.resolve(addr, block),
 			await this.resolveBlockDirective(block),
 		);
 	}
@@ -99,7 +99,7 @@ module.exports = class FlexEther {
 
 	async getCode(addr, block='latest') {
 		return this.rpc.getCode(
-			await this.resolve(addr),
+			await this.resolve(addr, block),
 			await this.resolveBlockDirective(block),
 		);
 	}
@@ -159,10 +159,10 @@ module.exports = class FlexEther {
 		throw new Error(`Invalid block directive: ${block}`);
 	}
 
-	async resolve(addr) {
+	async resolve(addr, block='latest') {
 		if (!addr)
-			throw new Error('Invalid address.');
-		return this._resolver.resolve(addr);
+			throw new Error(`Invalid address: "${addr}"`);
+		return this._resolver.resolve(addr, block);
 	}
 };
 
@@ -189,14 +189,14 @@ async function createTransactionOpts(inst, to, opts) {
 	if (opts.from === null) {
 		// Explicitly leaving it undefined.
 	} else if (_.isString(opts.from)) {
-		from = await inst.resolve(opts.from);
+		from = await inst.resolve(opts.from, opts.block);
 	} else if (_.isNumber(opts.from)) {
 		from = opts.from;
 	} else if (opts.key)
 		from = util.privateKeyToAddress(opts.key);
 	else
 		from = await inst.getDefaultAccount();
-	to = to ? await inst.resolve(to) : undefined;
+	to = to ? await inst.resolve(to, opts.block) : undefined;
 	return {
 		gasPrice: opts.gasPrice,
 		gasLimit: opts.gasLimit || opts.gas,
@@ -226,8 +226,16 @@ function normalizeTxOpts(opts) {
 }
 
 async function callTx(inst, to, opts) {
-	const block = _.isNil(opts.block) ?
-		undefined : await inst.resolveBlockDirective(opts.block);
+	const block = _.isNil(opts.block)
+		? undefined : await inst.resolveBlockDirective(opts.block);
+	const overrides = _.isNil(opts.overrides)
+		? undefined
+		: _.zipObject(
+			await Promise.all(
+				Object.keys(opts.overrides).map(k => inst.resolve(k, opts.block)),
+			),
+			Object.values(opts.overrides),
+		);
 	const txOpts = await createTransactionOpts(inst, to, opts);
 	_.defaults(txOpts, {
 			gasPrice: 1,
@@ -235,7 +243,7 @@ async function callTx(inst, to, opts) {
 		});
 	if (!txOpts.to && (!txOpts.data || txOpts.data == '0x'))
 		throw Error('Transaction has no destination.');
-	return inst.rpc.call(normalizeTxOpts(txOpts), block);
+	return inst.rpc.call(normalizeTxOpts(txOpts), block, overrides);
 }
 
 async function sendTx(inst, to, opts) {

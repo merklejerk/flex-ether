@@ -293,7 +293,7 @@ change. Many of these can also be overridden in individual call options.
 - `async getTransactionCount(addr)` Get the nonce for an account.
 - `async resolveBlockDirective(blockNum)` Resolve a block directive (e.g., `41204102` or `-2`) to a block number.
 - `async getChainId()` Get the chain ID of the connected network.
-- `async resolveAddress(addr)` Resolve an ENS address. If a regular address is passed, the checksummed version will be returned.
+- `async resolveAddress(addr, block='latest')` Resolve an ENS address. If a regular address is passed, the checksummed version will be returned.
 - `async getBlockNumber()` Get the current block number.
 - `async getDefaultAccount()` Get the default account, set by the provider.
 - `async getCode(addr, block='latest')` Get the code bytes at `addr`.
