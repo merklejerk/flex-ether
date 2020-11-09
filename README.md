@@ -105,7 +105,7 @@ eth = new FlexEther(
 
 ### Sending ether
 
-Ether can be sent with the `transfer()` or the lower-level `send()` methods.
+Ether can be sent with the `transfer()` or the lower-level `send()`/`call()` methods.
 
 By default, transactions will be signed by the wallet associated with
 the first account given by the provider. You can override the
@@ -148,10 +148,13 @@ receipt = await eth.transfer(
 // Send 100 wei from a wallet defined by a private key and wait for the receipt
 receipt = await eth.transfer(
    '0xf6fb5b73987d6d9a139e23bab97be6fc89e0dcd1', '100', {key: PRIVATE_KEY});
-// Same as above but with send().
+// Same as above but with send(). transfer() is actually just a wrapper for send()
 receipt = await eth.send(
    '0xf6fb5b73987d6d9a139e23bab97be6fc89e0dcd1', {value: '100', key: PRIVATE_KEY});
-
+// Same as above but without actually writing to the blockchain and retrieving any
+// output data.
+   receipt = await eth.send(
+      '0xf6fb5b73987d6d9a139e23bab97be6fc89e0dcd1', {value: '100', key: PRIVATE_KEY});
 ```
 
 ##### Full options
@@ -173,6 +176,13 @@ await eth.transfer(
       // Signs the transaction with this private key and sends it from the address
       // associated with it. Overrides 'from' option.
       key: String,
+      // Any extra hex-encoded data (usually contract calldata) to attach to the transaction.
+      data: String,
+      // The block number at which to perform the `call()` or `estimateGas()` at.
+      // Only used by `call()` and `estimateGas()`. Can be a block number, a
+      // relative offset from the highest block number, or a directive like
+      // 'latest' or 'pending'.
+      block: String,
       // Gas price to use, as a hex or base-10 string, in wei.
       // If not specified, calculated from network gas price and bonus.
       gasPrice: String,
@@ -253,7 +263,7 @@ execution of code. By default, the library will automatically compute and
 allocate the gas needed before sending a transaction.
 
 You can get the gas explicitly by calling `estimateGas()` with the same
-parameters you would pass to `send()`.
+parameters you would pass to `call()`.
 
 ##### Examples
 ```js
@@ -291,6 +301,7 @@ change. Many of these can also be overridden in individual call options.
 
 ### Other Methods
 - `async getTransactionCount(addr)` Get the nonce for an account.
+- `async getTransactionReceipta(addr)` Get the receipt for a transaction.
 - `async resolveBlockDirective(blockNum)` Resolve a block directive (e.g., `41204102` or `-2`) to a block number.
 - `async getChainId()` Get the chain ID of the connected network.
 - `async resolveAddress(addr, block='latest')` Resolve an ENS address. If a regular address is passed, the checksummed version will be returned.

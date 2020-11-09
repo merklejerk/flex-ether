@@ -112,17 +112,20 @@ module.exports = class RpcClient {
 		return normalizeBlock(result);
 	}
 
-	async estimateGas(tx) {
+	async estimateGas(tx, blockNumber='latest') {
 		return toNumber(await this._send(
 			'eth_estimateGas',
-			[{
-				to: !_.isNil(tx.to) ? asAddress(tx.to) : undefined,
-				from: !_.isNil(tx.from) ? asAddress(tx.from) : undefined,
-				gas: !_.isNil(tx.gas) ? toHex(tx.gas) : undefined,
-				gasPrice: !_.isNil(tx.gasPrice) ? toHex(tx.gasPrice) : undefined,
-				value: !_.isNil(tx.value) ? toHex(tx.value) : undefined,
-				data: !_.isNil(tx.data) ? asBytes(tx.data) : undefined,
-			}],
+			[
+				{
+					to: !_.isNil(tx.to) ? asAddress(tx.to) : undefined,
+					from: !_.isNil(tx.from) ? asAddress(tx.from) : undefined,
+					gas: !_.isNil(tx.gas) ? toHex(tx.gas) : undefined,
+					gasPrice: !_.isNil(tx.gasPrice) ? toHex(tx.gasPrice) : undefined,
+					value: !_.isNil(tx.value) ? toHex(tx.value) : undefined,
+					data: !_.isNil(tx.data) ? asBytes(tx.data) : undefined,
+				},
+				asBlockNumber(blockNumber),
+			],
 		));
 	}
 

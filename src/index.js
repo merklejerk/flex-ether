@@ -115,7 +115,7 @@ module.exports = class FlexEther {
 
 	async estimateGas(to, opts={}) {
 		const txOpts = await createTransactionOpts(this, to, opts);
-		return await estimateGasRaw(this, txOpts, opts.gasBonus);
+		return await estimateGasRaw(this, txOpts, opts.block, opts.gasBonus);
 	}
 
 	send(to, opts={}) {
@@ -174,13 +174,15 @@ async function getBlockGasLimit(inst) {
 	}
 }
 
-async function estimateGasRaw(inst, txOpts, bonus) {
+async function estimateGasRaw(inst, txOpts, block, bonus) {
 	txOpts = _.assign({}, txOpts, {
 			gasPrice: 1,
 			gasLimit: await getBlockGasLimit(inst),
 		});
 	bonus = (_.isNumber(bonus) ? bonus : inst.gasBonus) || 0;
-	const gas = await inst.rpc.estimateGas(normalizeTxOpts(txOpts));
+	block = _.isNil(block)
+		? undefined : await inst.resolveBlockDirective(block);
+	const gas = await inst.rpc.estimateGas(normalizeTxOpts(txOpts), block);
 	return Math.ceil(gas * (1+bonus));
 }
 
@@ -259,7 +261,7 @@ async function sendTx(inst, to, opts) {
 	if (!txOpts.gasPrice)
 		txOpts.gasPrice = await inst.getGasPrice(opts.gasPriceBonus);
 	if (!txOpts.gasLimit)
-		txOpts.gasLimit = await estimateGasRaw(inst, txOpts, opts.gasBonus);
+		txOpts.gasLimit = await estimateGasRaw(inst, txOpts, undefined, opts.gasBonus);
 	if (!txOpts.chainId)
 		txOpts.chainId = await inst._chainId;
 	if (opts.key) {
