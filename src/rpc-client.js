@@ -113,6 +113,7 @@ module.exports = class RpcClient {
 	}
 
 	async estimateGas(tx, blockNumber='latest') {
+		blockNumber = asBlockNumber(blockNumber);
 		return toNumber(await this._send(
 			'eth_estimateGas',
 			[
@@ -124,7 +125,9 @@ module.exports = class RpcClient {
 					value: !_.isNil(tx.value) ? toHex(tx.value) : undefined,
 					data: !_.isNil(tx.data) ? asBytes(tx.data) : undefined,
 				},
-				asBlockNumber(blockNumber),
+				// Some providers (e.g., infura ropsten)
+				// do not like an extra estimateGas param.
+				...(blockNumber !== 'latest' ? [blockNumber]: []),
 			],
 		));
 	}
