@@ -218,7 +218,7 @@ module.exports = class RpcClient {
 			throw new RpcError(
 				[
 					`method=${JSON.stringify(method)}`,
-					`params=${JSON.stringify(params)}`,
+					`params=${JSON.stringify(params).slice(0, 64)}${JSON.stringify(params).length > 64 ? '...' : ''}`,
 					`error="${(response.error || {}).message}"`,
 				].join(', '),
 			);
