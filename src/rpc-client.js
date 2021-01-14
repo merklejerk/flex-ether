@@ -215,12 +215,22 @@ module.exports = class RpcClient {
 			throw new RpcError(`Expected RPC id=${id} but got id=${response.id}`);
 		}
 		if (response.error) {
+			let errorReturnData;
+			if (response.error.data) {
+				const errorTxHash = Object.keys(response.error.data).filter(k => k.startsWith('0x'))[0]
+				const errorData = response.error.data[errorTxHash];
+				if (errorData && errorData.return) {
+					errorReturnData = errorData.return;
+				}
+			}
 			throw new RpcError(
 				[
 					`method=${JSON.stringify(method)}`,
 					`params=${JSON.stringify(params).slice(0, 64)}${JSON.stringify(params).length > 64 ? '...' : ''}`,
 					`error="${(response.error || {}).message}"`,
+					...(errorReturnData ? [`errorData=${errorReturnData}`] : []),
 				].join(', '),
+				{ errorReturnData },
 			);
 		}
 		return response.result;
@@ -284,9 +294,10 @@ function normalizeLog(log) {
 }
 
 class RpcError extends Error {
-	constructor(msg) {
+	constructor(msg, data = {}) {
 		super(msg);
 		this.name = this.constructor.name;
+		Object.assign(this, data);
 	}
 };
 
