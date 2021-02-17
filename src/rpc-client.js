@@ -187,6 +187,14 @@ module.exports = class RpcClient {
 		return result ? normalizeReceipt(result) : result;
 	}
 
+	async getTransaction(txHash) {
+		const result = await this._send(
+			'eth_getTransactionByHash',
+			[ asHash(txHash) ],
+		);
+		return result ? normalizeTransaction(result) : result;
+	}
+
 	async getChainId() {
 		if (typeof(this._chainId) === 'number') {
 			return this._chainId;
@@ -290,6 +298,23 @@ function normalizeLog(log) {
 		blockNumber: toNumber(log.blockNumber),
 		logIndex: toNumber(log.logIndex),
 		transactionIndex: toNumber(log.transactionIndex),
+	};
+}
+
+function normalizeTransaction(tx) {
+	return {
+		...tx,
+		blockNumber: toNumber(tx.blockNumber),
+		from: toChecksumAddress(tx.from),
+		gas: toNumber(tx.gas),
+		gasPrice: toUnsigned(tx.gasPrice),
+		to: toChecksumAddress(tx.to),
+		nonce: toNumber(tx.nonce),
+		transactionIndex: toNumber(tx.transactionIndex),
+		value: toUnsigned(tx.value),
+		v: toNumber(tx.v),
+		r: toHex(tx.r),
+		s: toHex(tx.s),
 	};
 }
 

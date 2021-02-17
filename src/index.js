@@ -61,7 +61,11 @@ module.exports = class FlexEther {
 	}
 
 	async getTransactionReceipt(txHash) {
-		return this.rpc.getTransactionReceipt(await txHash);
+		return this.rpc.getTransactionReceipt(txHash);
+	}
+
+	async getTransaction(txHash) {
+		return this.rpc.getTransaction(txHash);
 	}
 
 	async getBalance(addr, block='latest') {

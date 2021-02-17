@@ -301,7 +301,8 @@ change. Many of these can also be overridden in individual call options.
 
 ### Other Methods
 - `async getTransactionCount(addr)` Get the nonce for an account.
-- `async getTransactionReceipta(addr)` Get the receipt for a transaction.
+- `async getTransaction(txHash)` Get the details of a submitted transaction.
+- `async getTransactionReceipt(txHash)` Get the receipt for a mined transaction.
 - `async resolveBlockDirective(blockNum)` Resolve a block directive (e.g., `41204102` or `-2`) to a block number.
 - `async getChainId()` Get the chain ID of the connected network.
 - `async resolveAddress(addr, block='latest')` Resolve an ENS address. If a regular address is passed, the checksummed version will be returned.
