@@ -308,7 +308,7 @@ function normalizeTransaction(tx) {
 		from: toChecksumAddress(tx.from),
 		gas: toNumber(tx.gas),
 		gasPrice: toUnsigned(tx.gasPrice),
-		to: toChecksumAddress(tx.to),
+		...(tx.to ? { to: toChecksumAddress(tx.to) } : {}),
 		nonce: toNumber(tx.nonce),
 		transactionIndex: toNumber(tx.transactionIndex),
 		value: toUnsigned(tx.value),
