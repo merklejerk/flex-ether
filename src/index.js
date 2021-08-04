@@ -229,7 +229,13 @@ async function estimateGasRaw(inst, txOpts, block, bonus) {
 	bonus = (_.isNumber(bonus) ? bonus : inst.gasBonus) || 0;
 	block = _.isNil(block)
 		? undefined : await inst.resolveBlockDirective(block);
-	const gas = await inst.rpc.estimateGas(normalizeTxOpts(txOpts), block);
+	const gas = await inst.rpc.estimateGas(
+		{
+			...normalizeTxOpts(txOpts),
+			gas: undefined,
+		},
+		block,
+	);
 	return Math.ceil(gas * (1+bonus));
 }
 
@@ -270,6 +276,7 @@ function normalizeTxOpts(opts) {
 		_opts.maxPriorityFeePerGas = util.toHex(opts.maxPriorityFeePerGas || 0);
 	}
 	_opts.gasLimit = util.toHex(opts.gasLimit || opts.gas || 0);
+	_opts.gas = _opts.gasLimit;
 	_opts.value = util.toHex(opts.value || 0);
 	if (!_.isNil(opts.nonce))
 		_opts.nonce = util.toHex(opts.nonce);

@@ -209,7 +209,7 @@ module.exports = class RpcClient {
 		if (typeof(this._chainId) === 'number') {
 			return this._chainId;
 		}
-		return this._chainId = toNumber(await this._send('net_version'));
+		return this._chainId = toNumber(await this._send('eth_chainId'));
 	}
 
 	async _send(method, params=[]) {
