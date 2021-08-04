@@ -313,6 +313,13 @@ async function callTx(inst, to, opts) {
 
 async function sendTx(inst, to, opts) {
 	const common = await inst._getChainCommon(opts.block);
+	let effectiveHardfork = common.hardfork();
+	if (effectiveHardfork === 'london') {
+		if (opts.gasPrice) {
+			// Using legacy gas price so drop down to berlin.
+			effectiveHardfork = 'berlin';
+		}
+	}
 	const txOpts = await createTransactionOpts(inst, to, opts);
 	if (!txOpts.from)
 		throw Error('Cannot determine caller.');
@@ -326,7 +333,7 @@ async function sendTx(inst, to, opts) {
 		txOpts.gasLimit = await estimateGasRaw(inst, txOpts, undefined, opts.gasBonus);
 	if (!txOpts.chainId)
 		txOpts.chainId = await inst._chainId;
-	if (common.hardfork() === 'london') {
+	if (effectiveHardfork === 'london') {
 		if (_.isNil(txOpts.maxPriorityFeePerGas)) {
 			txOpts.maxPriorityFeePerGas = await inst._getMaxPriorityFeeWithBonus(opts.gasPriceBonus);
 		}
@@ -343,7 +350,7 @@ async function sendTx(inst, to, opts) {
 	}
 	if (opts.key) {
 		// Sign the TX ourselves.
-		let tx = TX_TYPE_FOR_HARDFORK[common.hardfork()].fromTxData(normalizeTxOpts(txOpts), { common });
+		let tx = TX_TYPE_FOR_HARDFORK[effectiveHardfork].fromTxData(normalizeTxOpts(txOpts), { common });
 		tx = tx.sign(ethjs.toBuffer(opts.key));
 		const serialized = util.asBytes(tx.serialize());
 		return inst.rpc.sendRawTransaction(serialized);
