@@ -3,14 +3,45 @@ const _ = require('lodash');
 const assert = require('assert');
 const BigNumber = require('bignumber.js');
 const cw3p = require('create-web3-provider');
-const ethjstx = require('ethereumjs-tx').Transaction;
-const ethjscom = require('ethereumjs-common').default;
+const ethjsTx = require('@ethereumjs/tx');
+const ethjscom = require('@ethereumjs/common').default;
 const ethjs = require('ethereumjs-util');
 
 const util = require('./util');
 const Resolver = require('./resolver');
 const RpcClient = require('./rpc-client');
 const createTransactionPromise = require('./transaction-promise');
+
+function createCommonFork(chainId, fork='istanbul', parentChain='mainnet') {
+	return ethjscom.forCustomChain(
+		parentChain,
+		{
+			chainId,
+			name: `FlexEther-${fork}-${chainId}`,
+		},
+		fork,
+	);
+}
+
+const TX_TYPE_FOR_HARDFORK = {
+	'london': ethjsTx.FeeMarketEIP1559Transaction,
+	'berlin': ethjsTx.AccessListEIP2930Transaction,
+	'istanbul': ethjsTx.Transaction,
+};
+
+const HARD_FORKS_BY_CHAIN_ID = {
+	'1': [
+		{ block: 12965000, common: createCommonFork(1, 'london') },
+		{ block: 12244000, common: createCommonFork(1, 'berlin') },
+		{ block: 0, common: createCommonFork(1, 'istanbul') },
+	],
+	'3': [
+		{ block: 10499401, common: createCommonFork(3, 'london') },
+		{ block: 9812189, common: createCommonFork(3, 'berlin') },
+		{ block: 0, common: createCommonFork(3, 'istanbul') },
+	],
+	'*': [ { block: 0, common: createCommonFork(3, 'istanbul') } ],
+};
 
 module.exports = class FlexEther {
 	constructor(opts={}) {
@@ -26,29 +57,28 @@ module.exports = class FlexEther {
 		}
 		this.rpc = new RpcClient(this.provider);
 		this._resolver = new Resolver(this.rpc, opts.ens);
-		this.gasBonus = _.isNumber(opts.gasBonus) ? opts.gasBonus : 0.66;
+		this.gasBonus = _.isNumber(opts.gasBonus) ? opts.gasBonus : 0.5;
 		this.gasPriceBonus = _.isNumber(opts.gasPriceBonus) ?
-			opts.gasPriceBonus : -0.005;
-		this.maxGasPrice = opts.maxGasPrice || new BigNumber('250e9').toString(10); // 250 gwei
+			opts.gasPriceBonus : 0.005;
 	}
 
 	async getChainId() {
 		return this._chainId || (this._chainId = await this.rpc.getChainId());
 	}
 
-	async _getChainCommon() {
-		if (!this._chainCommon) {
-			const chainId = await this.getChainId();
-			this._chainCommon = ethjscom.forCustomChain(
-				'mainnet',
-				{
-					chainId,
-					name: `FlexEther-Istanbul-${chainId}`,
-				},
-				'istanbul',
-			);
+	async _getChainCommon(blockNumber=undefined) {
+		if (!_.isNil(blockNumber)) {
+			blockNumber = this.resolveBlockDirective(blockNumber);
+		} else {
+			blockNumber = await this.getBlockNumber();
 		}
-		return this._chainCommon;
+		const chainId = await this.getChainId();
+		const forks = HARD_FORKS_BY_CHAIN_ID[chainId] || HARD_FORKS_BY_CHAIN_ID['*'];
+		for (const fork of forks) {
+			if (fork.block <= blockNumber) {
+				return fork.common;
+			}
+		}
 	}
 
 	async getDefaultAccount() {
@@ -77,6 +107,14 @@ module.exports = class FlexEther {
 
 	async getGasPrice() {
 		return this.rpc.getGasPrice();
+	}
+
+	async getBaseFee(block='pending') {
+		return (await this.getBlock(block)).baseFeePerGas;
+	}
+
+	async getMaxPriorityFee() {
+		return this.rpc.getMaxPriorityFeePerGas();
 	}
 
 	async getPastLogs(filter) {
@@ -111,10 +149,19 @@ module.exports = class FlexEther {
 	async _getGasPriceWithBonus(bonus) {
 		bonus = (_.isNumber(bonus) ? bonus : this.gasPriceBonus) || 0;
 		const price = new BigNumber(await this.getGasPrice()).times(1 + bonus);
-		if (price.gt(this.maxGasPrice)) {
-			price = new BigNumber(max);
-		}
-		return price.toString(10);
+		return price.integerValue().toString(10);
+	}
+
+	async _getMaxPriorityFeeWithBonus(bonus) {
+		bonus = (_.isNumber(bonus) ? bonus : this.gasPriceBonus) || 0;
+		const price = new BigNumber(await this.getMaxPriorityFee()).times(1 + bonus);
+		return price.integerValue().toString(10);
+	}
+
+	async _getBaseFeeWithBonus(bonus) {
+		bonus = (_.isNumber(bonus) ? bonus : this.gasPriceBonus) || 0;
+		const price = new BigNumber(await this.getBaseFee()).times(1 + bonus);
+		return price.integerValue().toString(10);
 	}
 
 	async estimateGas(to, opts={}) {
@@ -179,10 +226,6 @@ async function getBlockGasLimit(inst) {
 }
 
 async function estimateGasRaw(inst, txOpts, block, bonus) {
-	txOpts = _.assign({}, txOpts, {
-			gasPrice: 1,
-			gasLimit: await getBlockGasLimit(inst),
-		});
 	bonus = (_.isNumber(bonus) ? bonus : inst.gasBonus) || 0;
 	block = _.isNil(block)
 		? undefined : await inst.resolveBlockDirective(block);
@@ -205,6 +248,8 @@ async function createTransactionOpts(inst, to, opts) {
 	to = to ? await inst.resolve(to, opts.block) : undefined;
 	return {
 		gasPrice: opts.gasPrice,
+		maxFeePerGas: opts.maxFeePerGas,
+		maxPriorityFeePerGas: opts.maxPriorityFeePerGas,
 		gasLimit: opts.gasLimit || opts.gas,
 		value: opts.value || 0,
 		data: opts.data,
@@ -215,8 +260,16 @@ async function createTransactionOpts(inst, to, opts) {
 
 function normalizeTxOpts(opts) {
 	const _opts = {};
-	_opts.gasPrice = util.toHex(opts.gasPrice || 0);
-	_opts.gas = util.toHex(opts.gasLimit || opts.gas || 0);
+	if (!_.isNil(opts.gasPrice)) {
+		_opts.gasPrice = util.toHex(opts.gasPrice || 0);
+	}
+	if (!_.isNil(opts.maxFeePerGas)) {
+		_opts.maxFeePerGas = util.toHex(opts.maxFeePerGas || 0);
+	}
+	if (!_.isNil(opts.maxPriorityFeePerGas)) {
+		_opts.maxPriorityFeePerGas = util.toHex(opts.maxPriorityFeePerGas || 0);
+	}
+	_opts.gasLimit = util.toHex(opts.gasLimit || opts.gas || 0);
 	_opts.value = util.toHex(opts.value || 0);
 	if (!_.isNil(opts.nonce))
 		_opts.nonce = util.toHex(opts.nonce);
@@ -243,16 +296,16 @@ async function callTx(inst, to, opts) {
 			Object.values(opts.overrides),
 		);
 	const txOpts = await createTransactionOpts(inst, to, opts);
-	_.defaults(txOpts, {
-			gasPrice: 1,
-			gasLimit: await getBlockGasLimit(inst)
-		});
+	if (_.isNil(txOpts.gasLimit)) {
+		txOpts.gasLimit = await getBlockGasLimit(inst);
+	}
 	if (!txOpts.to && (!txOpts.data || txOpts.data == '0x'))
 		throw Error('Transaction has no destination.');
 	return inst.rpc.call(normalizeTxOpts(txOpts), block, overrides);
 }
 
 async function sendTx(inst, to, opts) {
+	const common = await inst._getChainCommon(opts.block);
 	const txOpts = await createTransactionOpts(inst, to, opts);
 	if (!txOpts.from)
 		throw Error('Cannot determine caller.');
@@ -262,19 +315,29 @@ async function sendTx(inst, to, opts) {
 		txOpts.nonce = opts.nonce;
 	else
 		txOpts.nonce = await inst.getTransactionCount(txOpts.from);
-	if (!txOpts.gasPrice)
-		txOpts.gasPrice = await inst.getGasPrice(opts.gasPriceBonus);
 	if (!txOpts.gasLimit)
 		txOpts.gasLimit = await estimateGasRaw(inst, txOpts, undefined, opts.gasBonus);
 	if (!txOpts.chainId)
 		txOpts.chainId = await inst._chainId;
+	if (common.hardfork() === 'london') {
+		if (_.isNil(txOpts.maxPriorityFeePerGas)) {
+			txOpts.maxPriorityFeePerGas = await inst._getMaxPriorityFeeWithBonus(opts.gasPriceBonus);
+		}
+		if (_.isNil(txOpts.maxFeePerGas)) {
+			txOpts.maxFeePerGas = BigNumber.sum(
+				await inst._getBaseFeeWithBonus(opts.gasPriceBonus),
+				txOpts.maxPriorityFeePerGas,
+			).toString(10);
+		}
+	} else {
+		if (_.isNil(txOpts.gasPrice)) {
+			txOpts.gasPrice = await inst._getGasPriceWithBonus(opts.gasPriceBonus);
+		}
+	}
 	if (opts.key) {
 		// Sign the TX ourselves.
-		const tx = new ethjstx(
-			normalizeTxOpts(txOpts),
-			{ common: await inst._getChainCommon() },
-		);
-		tx.sign(ethjs.toBuffer(opts.key));
+		let tx = TX_TYPE_FOR_HARDFORK[common.hardfork()].fromTxData(normalizeTxOpts(txOpts), { common });
+		tx = tx.sign(ethjs.toBuffer(opts.key));
 		const serialized = util.asBytes(tx.serialize());
 		return inst.rpc.sendRawTransaction(serialized);
 	}

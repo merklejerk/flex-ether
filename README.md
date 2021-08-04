@@ -82,6 +82,7 @@ eth = new FlexEther(
       // Defaults to 250 gwei.
       maxGasPrice: string,
       // Fractional bonus to apply to gas price when making transactions.
+      // Affects gasPrice, maxPriorityFeePerGas, and maxFeePerGas.
       // 0.01 = +1%. May be negative to under-price.
       // Defaults to -0.005.
       // Can be overridden in send/transfer calls.
@@ -183,9 +184,20 @@ await eth.transfer(
       // relative offset from the highest block number, or a directive like
       // 'latest' or 'pending'.
       block: String,
-      // Gas price to use, as a hex or base-10 string, in wei.
+      // Legacy gas price to use, as a hex or base-10 string, in wei.
+      // Is overridden by `maxFeePerGas` and `maxPriorityFeePerGas`.
       // If not specified, calculated from network gas price and bonus.
       gasPrice: String,
+      // Maximum ETH per gas unit to spend on fees (basefee + priority tip),
+      // as a hex or base-10 string, in wei.
+      // If not specified, will be:
+      // `baseFee * gasPriceBonus + maxPriorityFeePerGas`
+      maxFeePerGas: String,
+      // Maximum ETH per gas unit to spend on priority tip for the miner,
+      // as a hex or base-10 string, in wei.
+      // If not specified, will be:
+      // `maxPriorityFeePerGas * gasPriceBonus`
+      maxPriorityFeePerGas: String,
       // Execution gas limit.
       // If not specified, it will be estimated with bonus.
       gas: Number,
@@ -303,6 +315,8 @@ change. Many of these can also be overridden in individual call options.
 - `async getTransactionCount(addr)` Get the nonce for an account.
 - `async getTransaction(txHash)` Get the details of a submitted transaction.
 - `async getTransactionReceipt(txHash)` Get the receipt for a mined transaction.
+- `async getGasPrice()` Get the legacy suggested gas price.
+- `async getMaxPriorityFeePerGas()` Get the suggested max priority fee.
 - `async resolveBlockDirective(blockNum)` Resolve a block directive (e.g., `41204102` or `-2`) to a block number.
 - `async getChainId()` Get the chain ID of the connected network.
 - `async resolveAddress(addr, block='latest')` Resolve an ENS address. If a regular address is passed, the checksummed version will be returned.

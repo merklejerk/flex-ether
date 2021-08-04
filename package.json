@@ -1,6 +1,6 @@
 {
 	"name": "flex-ether",
-	"version": "1.9.1",
+	"version": "1.10.0",
 	"description": "A modern, flexible library for sending ethereum transactions.",
 	"main": "src/index.js",
 	"repository": {
@@ -16,16 +16,16 @@
 		"test": "mocha --timeout 8000 ./test/*.js"
 	},
 	"dependencies": {
+		"@ethereumjs/common": "^2.4.0",
+		"@ethereumjs/tx": "^3.3.0",
 		"bignumber.js": "^9.0.0",
 		"create-web3-provider": "^1.6.1",
-		"ethereumjs-common": "^1.5.0",
-		"ethereumjs-tx": "^2.1.2",
 		"ethereumjs-util": "^6.2.0",
 		"lodash": "^4.17.15"
 	},
 	"devDependencies": {
 		"ganache-cli": "^6.7.0",
-		"ganache-core": "^2.10.2",
+		"ganache-core": "^2.13.2",
 		"mocha": "^6.2.2",
 		"mz": "^2.7.0"
 	},

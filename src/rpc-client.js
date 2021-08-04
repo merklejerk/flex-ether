@@ -86,6 +86,10 @@ module.exports = class RpcClient {
 		return toUnsigned(await this._send('eth_gasPrice'));
 	}
 
+	async getMaxPriorityFeePerGas(tx) {
+		return toUnsigned(await this._send('eth_maxPriorityFeePerGas'));
+	}
+
 	async getBlockNumber() {
 		return toNumber(await this._send('eth_blockNumber'));
 	}
@@ -122,6 +126,8 @@ module.exports = class RpcClient {
 					from: !_.isNil(tx.from) ? asAddress(tx.from) : undefined,
 					gas: !_.isNil(tx.gas) ? toHex(tx.gas) : undefined,
 					gasPrice: !_.isNil(tx.gasPrice) ? toHex(tx.gasPrice) : undefined,
+					maxFeePerGas: !_.isNil(tx.maxFeePerGas) ? toHex(tx.maxFeePerGas) : undefined,
+					maxPriorityFeePerGas: !_.isNil(tx.maxPriorityFeePerGas) ? toHex(tx.maxPriorityFeePerGas) : undefined,
 					value: !_.isNil(tx.value) ? toHex(tx.value) : undefined,
 					data: !_.isNil(tx.data) ? asBytes(tx.data) : undefined,
 				},
@@ -141,6 +147,8 @@ module.exports = class RpcClient {
 					from: !_.isNil(tx.from) ? asAddress(tx.from) : undefined,
 					gas: !_.isNil(tx.gas) ? toHex(tx.gas) : undefined,
 					gasPrice: !_.isNil(tx.gasPrice) ? toHex(tx.gasPrice) : undefined,
+					maxFeePerGas: !_.isNil(tx.maxFeePerGas) ? toHex(tx.maxFeePerGas) : undefined,
+					maxPriorityFeePerGas: !_.isNil(tx.maxPriorityFeePerGas) ? toHex(tx.maxPriorityFeePerGas) : undefined,
 					value: !_.isNil(tx.value) ? toHex(tx.value) : undefined,
 					data: !_.isNil(tx.data) ? asBytes(tx.data) : undefined,
 				},
@@ -165,6 +173,8 @@ module.exports = class RpcClient {
 				from: !_.isNil(tx.from) ? asAddress(tx.from) : undefined,
 				gas: !_.isNil(tx.gas) ? toHex(tx.gas) : undefined,
 				gasPrice: !_.isNil(tx.gasPrice) ? toHex(tx.gasPrice) : undefined,
+				maxPriorityFeePerGas: !_.isNil(tx.maxPriorityFeePerGas) ? toHex(tx.maxPriorityFeePerGas) : undefined,
+				maxFeePerGas: !_.isNil(tx.maxFeePerGas) ? toHex(tx.maxFeePerGas) : undefined,
 				nonce: !_.isNil(tx.nonce) ? toHex(tx.nonce) : undefined,
 				value: !_.isNil(tx.value) ? toHex(tx.value) : undefined,
 				data: !_.isNil(tx.data) ? asBytes(tx.data) : undefined,
@@ -266,6 +276,7 @@ function marshallStateOverride(override) {
 function normalizeBlock(block) {
 	return {
 		...block,
+		...(block.baseFeePerGas ? { baseFeePerGas: toUnsigned(block.baseFeePerGas) } : {}),
 		difficulty: toNumber(block.difficulty),
 		gasLimit: toNumber(block.gasLimit),
 		gasUsed: toNumber(block.gasUsed),
@@ -273,13 +284,14 @@ function normalizeBlock(block) {
 		size: toNumber(block.size),
 		timestamp: toNumber(block.timestamp),
 		totalDifficulty: toNumber(block.totalDifficulty),
-		miner: toChecksumAddress(block.miner),
+		miner: block.miner ? toChecksumAddress(block.miner) : undefined,
 	};
 }
 
 function normalizeReceipt(receipt) {
 	return {
 		...receipt,
+		...(receipt.effectiveGasPrice ? { effectiveGasPrice: toUnsigned(receipt.effectiveGasPrice) } : {}),
 		blockNumber: toNumber(receipt.blockNumber),
 		cumulativeGasUsed: toNumber(receipt.cumulativeGasUsed),
 		gasUsed: toNumber(receipt.gasUsed),
@@ -304,11 +316,13 @@ function normalizeLog(log) {
 function normalizeTransaction(tx) {
 	return {
 		...tx,
+		...(tx.gasPrice ? { gasPrice: toUnsigned(tx.gasPrice) } : {}),
+		...(tx.maxFeePerGas ? { maxFeePerGas: toUnsigned(tx.maxFeePerGas) } : {}),
+		...(tx.maxPriorityFeePerGas ? { maxPriorityFeePerGas: toUnsigned(tx.maxPriorityFeePerGas) } : {}),
+		...(tx.to ? { to: toChecksumAddress(tx.to) } : {}),
 		blockNumber: toNumber(tx.blockNumber),
 		from: toChecksumAddress(tx.from),
 		gas: toNumber(tx.gas),
-		gasPrice: toUnsigned(tx.gasPrice),
-		...(tx.to ? { to: toChecksumAddress(tx.to) } : {}),
 		nonce: toNumber(tx.nonce),
 		transactionIndex: toNumber(tx.transactionIndex),
 		value: toUnsigned(tx.value),
