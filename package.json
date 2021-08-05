@@ -1,6 +1,6 @@
 {
 	"name": "flex-ether",
-	"version": "1.10.2",
+	"version": "1.10.3",
 	"description": "A modern, flexible library for sending ethereum transactions.",
 	"main": "src/index.js",
 	"repository": {

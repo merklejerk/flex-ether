@@ -313,7 +313,7 @@ async function callTx(inst, to, opts) {
 
 async function sendTx(inst, to, opts) {
 	const common = await inst._getChainCommon(opts.block);
-	let effectiveHardfork = common.hardfork();
+	let effectiveHardfork = opts.fork || common.hardfork();
 	if (effectiveHardfork === 'london') {
 		if (opts.gasPrice) {
 			// Using legacy gas price so drop down to berlin.
