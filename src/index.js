@@ -40,7 +40,6 @@ const HARD_FORKS_BY_CHAIN_ID = {
 		{ block: 9812189, common: createCommonFork(3, 'berlin') },
 		{ block: 0, common: createCommonFork(3, 'istanbul') },
 	],
-	'*': [ { block: 0, common: createCommonFork(3, 'istanbul') } ],
 };
 
 module.exports = class FlexEther {
@@ -73,7 +72,8 @@ module.exports = class FlexEther {
 			blockNumber = await this.getBlockNumber();
 		}
 		const chainId = await this.getChainId();
-		const forks = HARD_FORKS_BY_CHAIN_ID[chainId] || HARD_FORKS_BY_CHAIN_ID['*'];
+		const forks = HARD_FORKS_BY_CHAIN_ID[chainId]
+			|| [ { block: 0, common: createCommonFork(chainId, 'istanbul') } ];
 		for (const fork of forks) {
 			if (fork.block <= blockNumber) {
 				return fork.common;
