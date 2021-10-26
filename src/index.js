@@ -221,7 +221,7 @@ async function getBlockGasLimit(inst) {
 	while (true) {
 		const lastBlock = await inst.getBlock();
 		if (lastBlock != null)
-			return lastBlock.gasLimit;
+			return lastBlock.gasLimit || 8e6;
 	}
 }
 

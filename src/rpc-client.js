@@ -278,7 +278,7 @@ function normalizeBlock(block) {
 		...block,
 		...(block.baseFeePerGas ? { baseFeePerGas: toUnsigned(block.baseFeePerGas) } : {}),
 		difficulty: toNumber(block.difficulty),
-		gasLimit: toNumber(block.gasLimit),
+		gasLimit: toNumber(block.gasLimit) || 0,
 		gasUsed: toNumber(block.gasUsed),
 		number: toNumber(block.number),
 		size: toNumber(block.size),
