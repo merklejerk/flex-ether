@@ -235,10 +235,14 @@ module.exports = class RpcClient {
 		if (response.error) {
 			let errorReturnData;
 			if (response.error.data) {
-				const errorTxHash = Object.keys(response.error.data).filter(k => k.startsWith('0x'))[0]
-				const errorData = response.error.data[errorTxHash];
-				if (errorData && errorData.return) {
-					errorReturnData = errorData.return;
+				if (response.error.data) {
+					errorReturnData = response.error.data;
+				} else {
+					const errorTxHash = Object.keys(response.error.data).filter(k => k.startsWith('0x'))[0]
+					const errorData = response.error.data[errorTxHash];
+					if (errorData && errorData.return) {
+						errorReturnData = errorData.return;
+					}
 				}
 			}
 			throw new RpcError(
