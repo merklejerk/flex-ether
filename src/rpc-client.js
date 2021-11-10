@@ -222,7 +222,7 @@ module.exports = class RpcClient {
 		if (numArgs > 1) {
 			sendPayload = promisify(sendPayload);
 		}
-		const id = Math.floor(Math.random() * 2**64);
+		const id = Math.floor(Math.random() * 2**32);
 		const response = await sendPayload({
 			jsonrpc: "2.0",
 			id,
@@ -235,16 +235,16 @@ module.exports = class RpcClient {
 		if (response.error) {
 			let errorReturnData;
 			if (response.error.data) {
-				if (response.error.data) {
-					errorReturnData = response.error.data;
-				} else {
-					const errorTxHash = Object.keys(response.error.data).filter(k => k.startsWith('0x'))[0]
-					const errorData = response.error.data[errorTxHash];
+				errorReturnData = response.error.data;
+				if (typeof(errorReturnData) === 'object') {
+					const errorTxHash = Object.keys(errorReturnData).filter(k => k.startsWith('0x'))[0]
+					const errorData = errorReturnData[errorTxHash];
 					if (errorData && errorData.return) {
 						errorReturnData = errorData.return;
 					}
 				}
 			}
+			console.log(errorReturnData);
 			throw new RpcError(
 				[
 					`method=${JSON.stringify(method)}`,
