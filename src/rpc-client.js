@@ -19,7 +19,6 @@ module.exports = class RpcClient {
 	constructor(provider) {
 		this.provider = provider;
 		this._chainId = null;
-		this._nextRpcId = _.random(1, 2**32);
 	}
 
 	async getDefaultAccount() {
