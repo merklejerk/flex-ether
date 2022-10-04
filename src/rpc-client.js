@@ -243,7 +243,6 @@ module.exports = class RpcClient {
 					}
 				}
 			}
-			console.log(errorReturnData);
 			throw new RpcError(
 				[
 					`method=${JSON.stringify(method)}`,
