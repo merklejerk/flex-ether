@@ -2,7 +2,7 @@
 [![npm package](https://badge.fury.io/js/flex-ether.svg)](https://www.npmjs.com/package/flex-ether)
 
 # flex-ether
-A modern, flexible Ethereum library for sending ethereum transactions that:
+A flexible Ethereum library for sending ethereum transactions that:
 
 - Requires minimal to *no* configuration to get going on all networks (no provider necessary).
 - Can sign and send transactions from arbitrary wallets (private keys).
